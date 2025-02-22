@@ -19,10 +19,10 @@
                         username = Console.ReadLine();
                         break;
                     case "/help":
-                        Console.WriteLine($"{username}, бот предоставляет краткую информацию по ключевым словам C# с небольшими примерами. Примеры ключевых слов abstract, event, namespace");
+                        Console.WriteLine(reply(username, "Бот предоставляет краткую информацию по ключевым словам C# с небольшими примерами. Примеры ключевых слов abstract, event, namespace"));
                         break;
                     case "/info":
-                        Console.WriteLine($"{username}, версия программы 0.1.0-alpha. Дата создания 22.02.2025");
+                        Console.WriteLine(reply(username, "Версия программы 0.1.0-alpha. Дата создания 22.02.2025."));
                         break;
                     case "/exit":
                         username = "";
@@ -35,12 +35,31 @@
                             }
                         break;
                     default:
-                        Console.WriteLine($"{username}, команда {BotCommand} не предусмотрена к обработке.");
-                        Console.WriteLine(InfoMessage);
+                        if (!string.IsNullOrEmpty(BotCommand))
+                        {
+                            Console.WriteLine(reply(username, $"Команда {BotCommand} не предусмотрена к обработке."));
+                            Console.WriteLine(InfoMessage);
+                        }
                         break;
                 }
             }
 
+        }
+
+        /// <summary>
+        ///  Формируется строка сообщения, при необходимости с обращением к пользователю в зависимости указано или нет имя пользователя. Если имя пользователя не задано,
+        ///  тогда возвращаетя значение параметра message как есть. Иначе, возвращается строка с корректным обращением к пользователю
+        /// </summary>
+        /// <param name="username">Имя пользователя</param>
+        /// <param name="message">Текст сообщения</param>
+        /// <returns></returns>
+        static string reply (string username, string message)
+        {
+            if (string.IsNullOrEmpty(username))
+            {
+                return message;
+            }
+            return $"{username}, " + message?.First().ToString().ToLower() + message?.Substring(1);
         }
     }
 }
