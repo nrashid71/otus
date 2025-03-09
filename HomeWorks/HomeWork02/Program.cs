@@ -12,11 +12,11 @@
             Console.WriteLine(InfoMessage);
             while (run) {
                 Console.WriteLine("Введите команду:");
-                BotCommand = Console.ReadLine();
+                BotCommand = Console.ReadLine() ?? "";
                 switch (BotCommand) {
                     case "/start":
                         Console.WriteLine("Введите Ваше имя:");
-                        username = Console.ReadLine();
+                        username = Console.ReadLine() ?? "";
                         break;
                     case "/help":
                         Console.WriteLine(reply(username, "Бот предоставляет краткую информацию по ключевым словам C# с небольшими примерами. Примеры ключевых слов abstract, event, namespace"));
