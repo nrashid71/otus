@@ -46,15 +46,13 @@ namespace Bot
                     switch (BotCommand)
                     {
                         case "/start":
-                            Console.Write("Введите Ваше имя:");
-                            UserName = Console.ReadLine() ?? "";
-                            //throw new Exception("Test exception");
+                            UserName = Start();
                             break;
                         case "/help":
                             Help(UserName);
                             break;
                         case "/info":
-                            Console.WriteLine(Replay(UserName, "Версия программы 0.1.0-alpha. Дата создания 22.02.2025."));
+                            Info(UserName);
                             break;
                         case "/exit":
                             run = false;
@@ -68,18 +66,11 @@ namespace Bot
                         case "/removetask":
                             RemoveTask();
                             break;
-                        case string bc when bc.StartsWith("/echo "):
-                            if (!string.IsNullOrEmpty(UserName))
-                            {
-                                Console.WriteLine(BotCommand.Substring(6));
-                            }
+                        case string bc when !string.IsNullOrWhiteSpace(UserName) && (bc == "/echo" || bc.StartsWith("/echo ")):
+                            Echo(BotCommand, UserName);
                             break;
                         default:
-                            if (!string.IsNullOrEmpty(BotCommand))
-                            {
-                                Console.WriteLine(Replay(UserName, $"Команда {BotCommand} не предусмотрена к обработке."));
-                                Console.WriteLine(InfoMessage);
-                            }
+                            NonCommand(BotCommand, UserName, InfoMessage);
                             break;
                     }
                 }
@@ -101,6 +92,53 @@ namespace Bot
                 }
             }
 
+        }
+
+        /// <summary>
+        /// Метод для начала сеанса взаимодействия бота с пользователм
+        /// </summary>
+        /// <returns>Имя пользователя</returns>
+        static string Start()
+        {
+            Console.Write("Введите Ваше имя:");
+            return Console.ReadLine() ?? "";
+        }
+
+        /// <summary>
+        /// Обработка введенной строк пользователем, которая не была распознана как команда.
+        /// </summary>
+        /// <param name="str">Введенная строка.</param>
+        /// <param name="userName">Имя пользователя.</param>
+        /// <param name="infoMessage">Сообщение для пользователя.</param>
+        static void NonCommand(string str, string userName, string infoMessage)
+        {
+            if (!string.IsNullOrEmpty(str))
+            {
+                Console.WriteLine(Replay(userName, $"Команда {str} не предусмотрена к обработке."));
+                Console.WriteLine(infoMessage);
+            }
+        }
+
+        /// <summary>
+        /// Команда возвращает введенный текст.
+        /// </summary>
+        /// <param name="botCommand">Введенная пользователем команда.</param>
+        /// <param name="userName">Имя пользователя.</param>
+        static void Echo(string botCommand, string userName)
+        {
+            if (!string.IsNullOrEmpty(userName))
+            {
+                Console.WriteLine(botCommand.Substring(6));
+            }
+        }
+
+        /// <summary>
+        /// Вывод информации о программе.
+        /// </summary>
+        /// <param name="userName">Имя пользователя.</param>
+        static void Info(string userName)
+        {
+            Console.WriteLine(Replay(userName, "Версия программы 0.1.0-alpha. Дата создания 22.02.2025."));
         }
 
         /// <summary>
@@ -226,13 +264,41 @@ namespace Bot
         {
             Console.Write($"Введите максимально допустимое количество задач ({minCountLimit}-{maxCountLimit}): ");
             string TasksLimitStr = Console.ReadLine() ?? "";
-            if (!int.TryParse(TasksLimitStr, out int TasksLimit) || TasksLimit < minCountLimit || TasksLimit > maxCountLimit)
+            return ParseAndValidateInt(TasksLimitStr, minCountLimit, maxCountLimit);
+        }
+
+        /// <summary>
+        /// Приводит введенную пользователм строку к int и проверяет, что оно находится в диапазоне min и max.
+        /// В противном случае выбрасывать ArgumentException с сообщением.
+        /// </summary>
+        /// <param name="str">Введенная пользователем строка</param>
+        /// <param name="min">Левая граница диапазона допустимых значений, для вводимого пользователем значения.</param>
+        /// <param name="max">Правая граница диапазона допустимых значений, для вводимого пользователем значения.</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
+        static int ParseAndValidateInt(string? str, int min, int max)
+        {
+            ValidateString(str);
+
+            if (!int.TryParse(str, out int TasksLimit) || TasksLimit < min || TasksLimit > max)
             {
-                throw new ArgumentException($"Для максимального допустимого количества задач ожидалось значение от {minCountLimit} до {maxCountLimit}, а было введено значение \"{TasksLimitStr}\"");
+                throw new ArgumentException($"Для максимального допустимого количества задач ожидалось значение от {min} до {max}, а было введено значение \"{str}\"");
             }
             return TasksLimit;
         }
 
+        /// <summary>
+        /// Проверка на "непустое" значение строки.
+        /// </summary>
+        /// <param name="str">Проверяемая строка</param>
+        /// <exception cref="ArgumentException"></exception>
+        static void ValidateString(string? str)
+        {
+            if (string.IsNullOrWhiteSpace(str))
+            {
+                throw new ArgumentException($"Недопустимое значение для строки - она не должна быть пустой и не должна содержать только пробельные символы");
+            }
+        }
     }
 
 }
