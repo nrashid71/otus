@@ -1,10 +1,30 @@
-﻿using System.Threading.Tasks;
+﻿using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace Bot
 {
     internal class Program
     {
+        /// <summary>
+        /// Список задач
+        /// </summary>
         static List<string> BotTasks = new List<string>();
+        
+        /// <summary>
+        /// Максимальное количество задач, указанное пользователем. Значение -1 указывает на то, что атрибут не проинициализирован пользователем через запрос.
+        /// </summary>
+        static int taskCountLimit = -1;
+
+        /// <summary>
+        /// Левая граница диапазона значений для максимально количества задач.
+        /// </summary>
+        const int minCountLimit = 0;
+
+        /// <summary>
+        /// Правая граница диапазона значений для максимально количества задач.
+        /// </summary>
+        const int maxCountLimit = 100;
+
         static void Main(string[] args)
         {
             bool run = true;
@@ -13,45 +33,71 @@ namespace Bot
             string UserName = "";
             Console.WriteLine("Здравствуйте!");
             Console.WriteLine(InfoMessage);
-            while (run) {
-                Console.WriteLine("Введите команду:");
-                BotCommand = Console.ReadLine() ?? "";
-                switch (BotCommand) {
-                    case "/start":
-                        Console.Write("Введите Ваше имя:");
-                        UserName = Console.ReadLine() ?? "";
-                        break;
-                    case "/help":
-                        Help(UserName);
-                        break;
-                    case "/info":
-                        Console.WriteLine(Replay(UserName, "Версия программы 0.1.0-alpha. Дата создания 22.02.2025."));
-                        break;
-                    case "/exit":
-                        run = false;
-                        break;
-                    case "/addtask":
-                        AddTask();
-                        break;
-                    case "/showtask":
-                        ShowTasks();
-                        break;
-                    case "/removetask":
-                        RemoveTask();
-                        break;
-                    case string bc when bc.StartsWith("/echo "):
+            while (run)
+            {
+                try
+                {
+                    if (taskCountLimit == -1)
+                    {
+                        taskCountLimit = GetTasksLimit();
+                    }
+                    Console.WriteLine("Введите команду:");
+                    BotCommand = Console.ReadLine() ?? "";
+                    switch (BotCommand)
+                    {
+                        case "/start":
+                            Console.Write("Введите Ваше имя:");
+                            UserName = Console.ReadLine() ?? "";
+                            //throw new Exception("Test exception");
+                            break;
+                        case "/help":
+                            Help(UserName);
+                            break;
+                        case "/info":
+                            Console.WriteLine(Replay(UserName, "Версия программы 0.1.0-alpha. Дата создания 22.02.2025."));
+                            break;
+                        case "/exit":
+                            run = false;
+                            break;
+                        case "/addtask":
+                            AddTask();
+                            break;
+                        case "/showtask":
+                            ShowTasks();
+                            break;
+                        case "/removetask":
+                            RemoveTask();
+                            break;
+                        case string bc when bc.StartsWith("/echo "):
                             if (!string.IsNullOrEmpty(UserName))
                             {
                                 Console.WriteLine(BotCommand.Substring(6));
                             }
-                        break;
-                    default:
-                        if (!string.IsNullOrEmpty(BotCommand))
-                        {
-                            Console.WriteLine(Replay(UserName, $"Команда {BotCommand} не предусмотрена к обработке."));
-                            Console.WriteLine(InfoMessage);
-                        }
-                        break;
+                            break;
+                        default:
+                            if (!string.IsNullOrEmpty(BotCommand))
+                            {
+                                Console.WriteLine(Replay(UserName, $"Команда {BotCommand} не предусмотрена к обработке."));
+                                Console.WriteLine(InfoMessage);
+                            }
+                            break;
+                    }
+                }
+                catch (DuplicateTaskException ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+                catch (TaskCountLimitException ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+                catch (ArgumentException ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Произошла непредвиденная ошибка:\n {ex.GetType()}\n {ex.Message}\n {ex.StackTrace}\n {ex.InnerException}");
                 }
             }
 
@@ -78,10 +124,18 @@ namespace Bot
         /// </summary>
         static void AddTask()
         {
+            if (BotTasks.Count >= taskCountLimit)
+            {
+                throw new TaskCountLimitException((int)taskCountLimit);
+            }
             Console.WriteLine("Введите описание задачи:");
             var description = Console.ReadLine() ?? "";
             if (!string.IsNullOrEmpty(description))
             {
+                if (BotTasks.Contains(description))
+                {
+                    throw new DuplicateTaskException(description);
+                }
                 BotTasks.Add(description);
                 Console.WriteLine("Задача добавлена.");
             }
@@ -163,5 +217,22 @@ namespace Bot
 
         }
 
+        /// <summary>
+        /// Выводит текст с запросом на ввод допустимого количества задач. Если введенное значение не входит в указанный диапазон значений, то генерируется исключение
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
+        static int GetTasksLimit()
+        {
+            Console.Write($"Введите максимально допустимое количество задач ({minCountLimit}-{maxCountLimit}): ");
+            string TasksLimitStr = Console.ReadLine() ?? "";
+            if (!int.TryParse(TasksLimitStr, out int TasksLimit) || TasksLimit < minCountLimit || TasksLimit > maxCountLimit)
+            {
+                throw new ArgumentException($"Для максимального допустимого количества задач ожидалось значение от {minCountLimit} до {maxCountLimit}, а было введено значение \"{TasksLimitStr}\"");
+            }
+            return TasksLimit;
+        }
+
     }
+
 }
