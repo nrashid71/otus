@@ -16,6 +16,11 @@ namespace Bot
         static int taskCountLimit = -1;
 
         /// <summary>
+        /// Максимальная длина задачи, указанная пользователем. Значение -1 указывает на то, что атрибут не проинициализирован пользователем через запрос.
+        /// </summary>
+        static int taskLengthLimit = -1;
+
+        /// <summary>
         /// Левая граница диапазона значений для максимально количества задач.
         /// </summary>
         const int minCountLimit = 0;
@@ -24,6 +29,16 @@ namespace Bot
         /// Правая граница диапазона значений для максимально количества задач.
         /// </summary>
         const int maxCountLimit = 100;
+
+        /// <summary>
+        /// Левая граница диапазона допустимой длины задач.
+        /// </summary>
+        const int minLengthLimit = 1;
+
+        /// <summary>
+        /// Правая граница диапазона допустимой длины задач.
+        /// </summary>
+        const int maxLengthLimit = 100;
 
         static void Main(string[] args)
         {
@@ -40,6 +55,10 @@ namespace Bot
                     if (taskCountLimit == -1)
                     {
                         taskCountLimit = GetTasksLimit();
+                    }
+                    if (taskLengthLimit == -1)
+                    {
+                        taskLengthLimit = GetTaskLengthLimit();
                     }
                     Console.WriteLine("Введите команду:");
                     BotCommand = Console.ReadLine() ?? "";
@@ -79,6 +98,10 @@ namespace Bot
                     Console.WriteLine(ex.Message);
                 }
                 catch (TaskCountLimitException ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+                catch (TaskLengthLimitException ex)
                 {
                     Console.WriteLine(ex.Message);
                 }
@@ -170,6 +193,10 @@ namespace Bot
             var description = Console.ReadLine() ?? "";
             if (!string.IsNullOrEmpty(description))
             {
+                if (description.Length > taskLengthLimit)
+                {
+                    throw new TaskLengthLimitException(description.Length, taskLengthLimit);
+                }
                 if (BotTasks.Contains(description))
                 {
                     throw new DuplicateTaskException(description);
@@ -268,6 +295,18 @@ namespace Bot
         }
 
         /// <summary>
+        /// Выводит текст с запросом на ввод допустимого количества задач. Если введенное значение не входит в указанный диапазон значений, то генерируется исключение
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
+        static int GetTaskLengthLimit()
+        {
+            Console.Write($"Введите максимально допустимую длину задачи ({minLengthLimit}-{maxLengthLimit} символов): ");
+            string TaskLengthLimitStr = Console.ReadLine() ?? "";
+            return ParseAndValidateInt(TaskLengthLimitStr, minLengthLimit, maxLengthLimit);
+        }
+
+        /// <summary>
         /// Приводит введенную пользователм строку к int и проверяет, что оно находится в диапазоне min и max.
         /// В противном случае выбрасывать ArgumentException с сообщением.
         /// </summary>
@@ -282,7 +321,7 @@ namespace Bot
 
             if (!int.TryParse(str, out int TasksLimit) || TasksLimit < min || TasksLimit > max)
             {
-                throw new ArgumentException($"Для максимального допустимого количества задач ожидалось значение от {min} до {max}, а было введено значение \"{str}\"");
+                throw new ArgumentException($"Ожидалось значение от {min} до {max}, а было введено значение \"{str}\"");
             }
             return TasksLimit;
         }
