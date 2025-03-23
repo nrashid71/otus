@@ -32,9 +32,10 @@ class Program
         }
         catch(Exception ex)
         {
-            Console.WriteLine($"При попытке извлечения элемента из стека получили исклюение: {ex.Message}");
+            Console.WriteLine($"При попытке извлечения элемента из стека получили исключение: {ex.Message}");
         }
         // Доп. задание 1
+        Console.WriteLine("Доп. задание 1");
         s = new Stack("a", "b", "c");
         s.Merge(new Stack("1", "2", "3"));
         while (s.Size > 0)
@@ -42,6 +43,7 @@ class Program
             Console.WriteLine(s.Pop());
         }        
         // Доп. задание 2
+        Console.WriteLine("Доп. задание 2");
         s = Stack.Concat(new Stack("a", "b", "c"), new Stack("1", "2", "3"), new Stack("А", "Б", "В"));
         while (s.Size > 0)
         {
