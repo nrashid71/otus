@@ -45,4 +45,19 @@ public class Stack
     /// </summary>
     /// <returns></returns>
     public string Top =>  Size> 0 ?  _stack[Size- 1] : null;
+    
+    /// <summary>
+    /// Соединение стеков. Элементы каждого стека помещаются в результирующий стек в обратном порядке
+    /// </summary>
+    /// <param name="stacks">Последовательность параметров - стеки</param>
+    /// <returns></returns>
+    public static Stack Concat(params Stack[] stacks)
+    {
+        Stack stack = new Stack();
+        foreach (var s in stacks)
+        {
+            stack.Merge(s);
+        }
+        return stack;
+    }
 }
