@@ -1,4 +1,6 @@
-﻿namespace HomeWork05;
+﻿using System.Xml;
+
+namespace HomeWork05;
 
 class Program
 {
@@ -23,7 +25,22 @@ class Program
         s.Pop();
         // size = 0, Top = null
         Console.WriteLine($"size = {s.Size}, Top = {(s.Top == null ? "null" : s.Top)}");
-        s.Pop();
+        
+        try
+        {
+            s.Pop();
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"При попытке извлечения элемента из стека получили исклюение: {ex.Message}");
+        }
+        // Доп. задание 1
+        s = new Stack("a", "b", "c");
+        s.Merge(new Stack("1", "2", "3"));
+        while (s.Size > 0)
+        {
+            Console.WriteLine(s.Pop());
+        }        
         
     }
 }
