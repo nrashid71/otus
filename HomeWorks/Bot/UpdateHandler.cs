@@ -85,9 +85,6 @@ public class UpdateHandler : IUpdateHandler
                         case "/removetask":
                             RemoveTask(botClient, update);
                             break;
-                        case string bc when !string.IsNullOrWhiteSpace(UserName) && (bc == "/echo" || bc.StartsWith("/echo ")):
-                            Echo(botClient, update, BotCommand, UserName);
-                            break;
                         default:
                             NonCommand(botClient, update, BotCommand, UserName, InfoMessage);
                             break;
@@ -115,6 +112,8 @@ public class UpdateHandler : IUpdateHandler
     /// <summary>
     /// Метод для начала сеанса взаимодействия бота с пользователм
     /// </summary>
+    /// <param name="botClient"></param>
+    /// <param name="update"></param>
     /// <returns>Имя пользователя</returns>
     string Start(ITelegramBotClient botClient, Update update)
     {
@@ -125,6 +124,8 @@ public class UpdateHandler : IUpdateHandler
     /// <summary>
     /// Обработка введенной строк пользователем, которая не была распознана как команда.
     /// </summary>
+    /// <param name="botClient"></param>
+    /// <param name="update"></param>
     /// <param name="str">Введенная строка.</param>
     /// <param name="userName">Имя пользователя.</param>
     /// <param name="infoMessage">Сообщение для пользователя.</param>
@@ -138,21 +139,10 @@ public class UpdateHandler : IUpdateHandler
     }
 
     /// <summary>
-    /// Команда возвращает введенный текст.
-    /// </summary>
-    /// <param name="botCommand">Введенная пользователем команда.</param>
-    /// <param name="userName">Имя пользователя.</param>
-    void Echo(ITelegramBotClient botClient, Update update, string botCommand, string userName)
-    {
-        if (!string.IsNullOrEmpty(userName))
-        {
-            botClient.SendMessage(update.Message.Chat,botCommand.Substring(6));
-        }
-    }
-
-    /// <summary>
     /// Вывод информации о программе.
     /// </summary>
+    /// <param name="botClient"></param>
+    /// <param name="update"></param>
     /// <param name="userName">Имя пользователя.</param>
     void Info(ITelegramBotClient botClient, Update update, string userName)
     {
@@ -178,6 +168,8 @@ public class UpdateHandler : IUpdateHandler
     /// <summary>
     /// Добавление задачи
     /// </summary>
+    /// <param name="botClient"></param>
+    /// <param name="update"></param>
     void AddTask(ITelegramBotClient botClient, Update update)
     {
         if (BotTasks.Count >= taskCountLimit)
@@ -204,6 +196,8 @@ public class UpdateHandler : IUpdateHandler
     /// <summary>
     /// Отображение списка задач
     /// </summary>
+    /// <param name="botClient"></param>
+    /// <param name="update"></param>
     void ShowTasks(ITelegramBotClient botClient, Update update)
     {
         if (BotTasks.Count == 0)
@@ -221,6 +215,8 @@ public class UpdateHandler : IUpdateHandler
     /// <summary>
     /// Удаление задачи
     /// </summary>
+    /// <param name="botClient"></param>
+    /// <param name="update"></param>
     void RemoveTask(ITelegramBotClient botClient, Update update)
     {
         ShowTasks(botClient, update);
@@ -262,6 +258,8 @@ public class UpdateHandler : IUpdateHandler
     /// <summary>
     /// Вывод информации о том, что делает бот - команда /help.
     /// </summary>
+    /// <param name="botClient"></param>
+    /// <param name="update"></param>
     void Help(ITelegramBotClient botClient, Update update, string UserName)
     {
         string HelpMessage = @"Бот предоставляет краткую информацию по ключевым словам C# с небольшими примерами. Примеры ключевых слов abstract, event, namespace.
@@ -280,6 +278,8 @@ public class UpdateHandler : IUpdateHandler
     /// <summary>
     /// Выводит текст с запросом на ввод допустимого количества задач. Если введенное значение не входит в указанный диапазон значений, то генерируется исключение
     /// </summary>
+    /// <param name="botClient"></param>
+    /// <param name="update"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentException"></exception>
     int GetTasksLimit(ITelegramBotClient botClient, Update update)
@@ -292,6 +292,8 @@ public class UpdateHandler : IUpdateHandler
     /// <summary>
     /// Выводит текст с запросом на ввод допустимого количества задач. Если введенное значение не входит в указанный диапазон значений, то генерируется исключение
     /// </summary>
+    /// <param name="botClient"></param>
+    /// <param name="update"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentException"></exception>
     int GetTaskLengthLimit(ITelegramBotClient botClient, Update update)
