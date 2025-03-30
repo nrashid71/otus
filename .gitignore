@@ -9,6 +9,9 @@
 # .vs
 .vs/
 
+# .idea
+.idea/
+
 # Build results
 
 [Dd]ebug/
