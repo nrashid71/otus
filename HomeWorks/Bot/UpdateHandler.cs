@@ -39,13 +39,15 @@ public class UpdateHandler : IUpdateHandler
     /// Правая граница диапазона допустимой длины задач.
     /// </summary>
     const int maxLengthLimit = 100;
+
+    private List<string> _registredUserCommands = new List<string>() {"/addtask","/showtask","/removetask","/exit","/start"};
+    private User User { get; set; }
     
     public void HandleUpdateAsync(ITelegramBotClient botClient, Update update)
     {
             bool run = true;
             string BotCommand;
             string InfoMessage = "Вам доступны команды: start, help, info, addtask, showtasks, removetask, exit. При вводе команды указываейте вначале символ / (слеш).";
-            string UserName = "";
             botClient.SendMessage(update.Message.Chat,"Здравствуйте!");
             botClient.SendMessage(update.Message.Chat,InfoMessage);
             while (run)
@@ -64,29 +66,41 @@ public class UpdateHandler : IUpdateHandler
                     BotCommand = Console.ReadLine() ?? "";
                     switch (BotCommand)
                     {
-                        case "/start":
-                            UserName = Start(botClient, update);
-                            break;
                         case "/help":
-                            Help(botClient, update, UserName);
+                            Help(botClient, update);
                             break;
                         case "/info":
-                            Info(botClient, update, UserName);
-                            break;
-                        case "/exit":
-                            run = false;
-                            break;
-                        case "/addtask":
-                            AddTask(botClient, update);
-                            break;
-                        case "/showtask":
-                            ShowTasks(botClient, update);
-                            break;
-                        case "/removetask":
-                            RemoveTask(botClient, update);
+                            Info(botClient, update);
                             break;
                         default:
-                            NonCommand(botClient, update, BotCommand, UserName, InfoMessage);
+                            if (_registredUserCommands.Contains(BotCommand))
+                            {
+                                if (User != null)
+                                {
+                                    switch (BotCommand)
+                                    {
+                                        case "/start":
+                                            Start(botClient, update);
+                                            break;
+                                        case "/exit":
+                                            run = false;
+                                            break;
+                                        case "/addtask":
+                                            AddTask(botClient, update);
+                                            break;
+                                        case "/showtask":
+                                            ShowTasks(botClient, update);
+                                            break;
+                                        case "/removetask":
+                                            RemoveTask(botClient, update);
+                                            break;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                NonCommand(botClient, update, BotCommand, InfoMessage);
+                            }
                             break;
                     }
                 }
@@ -115,10 +129,10 @@ public class UpdateHandler : IUpdateHandler
     /// <param name="botClient"></param>
     /// <param name="update"></param>
     /// <returns>Имя пользователя</returns>
-    string Start(ITelegramBotClient botClient, Update update)
+    void Start(ITelegramBotClient botClient, Update update)
     {
-        botClient.SendMessage(update.Message.Chat,"Введите Ваше имя:");
-        return Console.ReadLine() ?? "";
+        var from = update?.Message?.From;
+        User = (new UserService()).RegisterUser(from?.Id ?? 0, from?.Username);
     }
 
     /// <summary>
@@ -127,13 +141,12 @@ public class UpdateHandler : IUpdateHandler
     /// <param name="botClient"></param>
     /// <param name="update"></param>
     /// <param name="str">Введенная строка.</param>
-    /// <param name="userName">Имя пользователя.</param>
     /// <param name="infoMessage">Сообщение для пользователя.</param>
-    void NonCommand(ITelegramBotClient botClient, Update update, string str, string userName, string infoMessage)
+    void NonCommand(ITelegramBotClient botClient, Update update, string str, string infoMessage)
     {
         if (!string.IsNullOrEmpty(str))
         {
-            botClient.SendMessage(update.Message.Chat,Replay(userName, $"Команда {str} не предусмотрена к обработке."));
+            botClient.SendMessage(update.Message.Chat,Replay($"Команда {str} не предусмотрена к обработке."));
             botClient.SendMessage(update.Message.Chat,infoMessage);
         }
     }
@@ -143,26 +156,24 @@ public class UpdateHandler : IUpdateHandler
     /// </summary>
     /// <param name="botClient"></param>
     /// <param name="update"></param>
-    /// <param name="userName">Имя пользователя.</param>
-    void Info(ITelegramBotClient botClient, Update update, string userName)
+    void Info(ITelegramBotClient botClient, Update update)
     {
-        botClient.SendMessage(update.Message.Chat,Replay(userName, "Версия программы 0.1.0-alpha. Дата создания 22.02.2025."));
+        botClient.SendMessage(update.Message.Chat,Replay("Версия программы 0.1.0-alpha. Дата создания 22.02.2025."));
     }
 
     /// <summary>
     ///  Формируется строка сообщения, при необходимости с обращением к пользователю в зависимости указано или нет имя пользователя. Если имя пользователя не задано,
     ///  тогда возвращаетя значение параметра message как есть. Иначе, возвращается строка с корректным обращением к пользователю
     /// </summary>
-    /// <param name="UserName">Имя пользователя</param>
     /// <param name="message">Текст сообщения</param>
     /// <returns></returns>
-    string Replay (string UserName, string message)
+    string Replay (string message)
     {
-        if (string.IsNullOrEmpty(UserName))
+        if (string.IsNullOrEmpty(User.TelegramUserName))
         {
             return message;
         }
-        return $"{UserName}, " + message?.First().ToString().ToLower() + message?.Substring(1);
+        return $"{User.TelegramUserName}, " + message?.First().ToString().ToLower() + message?.Substring(1);
     }
 
     /// <summary>
@@ -260,7 +271,7 @@ public class UpdateHandler : IUpdateHandler
     /// </summary>
     /// <param name="botClient"></param>
     /// <param name="update"></param>
-    void Help(ITelegramBotClient botClient, Update update, string UserName)
+    void Help(ITelegramBotClient botClient, Update update)
     {
         string HelpMessage = @"Бот предоставляет краткую информацию по ключевым словам C# с небольшими примерами. Примеры ключевых слов abstract, event, namespace.
 Список допустимых команд:
@@ -271,7 +282,7 @@ public class UpdateHandler : IUpdateHandler
  /showtasks  - отображение списка задач
  /removetask - удаление задачи
  /exit       - завершение работы с ботом";
-        botClient.SendMessage(update.Message.Chat,Replay(UserName, HelpMessage));
+        botClient.SendMessage(update.Message.Chat,Replay(HelpMessage));
 
     }
 
