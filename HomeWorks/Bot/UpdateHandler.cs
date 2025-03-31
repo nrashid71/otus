@@ -8,7 +8,7 @@ public class UpdateHandler : IUpdateHandler
     /// <summary>
     /// Список задач
     /// </summary>
-    List<string> BotTasks = new List<string>();
+    List<ToDoItem> BotTasks = new List<ToDoItem>();
         
     /// <summary>
     /// Максимальное количество задач, указанное пользователем. Значение -1 указывает на то, что атрибут не проинициализирован пользователем через запрос.
@@ -195,11 +195,14 @@ public class UpdateHandler : IUpdateHandler
             {
                 throw new TaskLengthLimitException(description.Length, taskLengthLimit);
             }
-            if (BotTasks.Contains(description))
+
+            if (BotTasks.Any(t => t.Name == description))
             {
                 throw new DuplicateTaskException(description);
             }
-            BotTasks.Add(description);
+            
+            BotTasks.Add(new ToDoItem(description, User));
+            
             botClient.SendMessage(update.Message.Chat,"Задача добавлена.");
         }
     }
@@ -217,8 +220,9 @@ public class UpdateHandler : IUpdateHandler
         }
         else
         {
-            for (int i = 0; i < BotTasks.Count; i++) {
-                botClient.SendMessage(update.Message.Chat,$"{i+1}.{BotTasks[i]}");
+            foreach (var task in BotTasks.Where(t => t.State == ToDoItemState.Active))
+            {
+                botClient.SendMessage(update.Message.Chat,$"{task.Name} - {task.CreatedAt} - {task.Id}");
             }
         }
     }
