@@ -11,7 +11,7 @@ namespace Bot
         {
             try
             {
-                var handler = new UpdateHandler();
+                var handler = new UpdateHandler(new ToDoUser(1, "Rashid"));
                 var botClient = new ConsoleBotClient();
                 botClient.StartReceiving(handler);
             }

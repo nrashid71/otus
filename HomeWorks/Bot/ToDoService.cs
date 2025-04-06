@@ -1,69 +1,83 @@
+using System.Collections.Immutable;
 using Otus.ToDoList.ConsoleBot;
 using Otus.ToDoList.ConsoleBot.Types;
 
 namespace Bot;
 public class ToDoService : IToDoService
 {
-    public IReadOnlyList<ToDoItem> GetAllByUserId(Guid userId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public IReadOnlyList<ToDoItem> GetActiveByUserId(Guid userId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public ToDoItem Add(ToDoUser user, string name)
-    {
-        throw new NotImplementedException();
-    }
-
-    public void MarkCompleted(Guid id)
-    {
-        throw new NotImplementedException();
-    }
-
-    public void Delete(Guid id)
-    {
-        throw new NotImplementedException();
-    }
-
     /// <summary>
     /// Список задач
     /// </summary>
-    List<ToDoItem> BotTasks = new List<ToDoItem>();
-
+    List<ToDoItem> _botTasks = new List<ToDoItem>();
     /// <summary>
     /// Максимальное количество задач, указанное пользователем. Значение -1 указывает на то, что атрибут не проинициализирован пользователем через запрос.
     /// </summary>
-    int taskCountLimit = -1;
+    int _taskCountLimit = -1;
     /// <summary>
     /// Максимальная длина задачи, указанная пользователем. Значение -1 указывает на то, что атрибут не проинициализирован пользователем через запрос.
     /// </summary>
-    int taskLengthLimit = -1;
+    int _taskLengthLimit = -1;
 
     /// <summary>
     /// Левая граница диапазона значений для максимально количества задач.
     /// </summary>
-    const int minCountLimit = 0;
+    const int MinCountLimit = 0;
 
     /// <summary>
     /// Правая граница диапазона значений для максимально количества задач.
     /// </summary>
-    const int maxCountLimit = 100;
+    const int MaxCountLimit = 100;
 
     /// <summary>
     /// Левая граница диапазона допустимой длины задач.
     /// </summary>
-    const int minLengthLimit = 1;
+    const int MinLengthLimit = 1;
 
     /// <summary>
     /// Правая граница диапазона допустимой длины задач.
     /// </summary>
-    const int maxLengthLimit = 100;
+    const int MaxLengthLimit = 100;
+
+    public ToDoService(ToDoUser? toDoUser)
+    {
+        this.toDoUser = toDoUser;
+    }
 
     public ToDoUser? toDoUser { get; set; }
+
+    public IReadOnlyList<ToDoItem> GetAllByUserId(Guid userId)
+    {
+        return _botTasks.Where(t => t.ToDoUser.UserId == userId).ToList().AsReadOnly();
+    }
+
+    public IReadOnlyList<ToDoItem> GetActiveByUserId(Guid userId)
+    {
+        return _botTasks.Where(t => t.ToDoUser.UserId == userId && t.State == ToDoItemState.Active).ToList().AsReadOnly();
+    }
+
+    public ToDoItem Add(ToDoUser user, string name)
+    {
+        ToDoItem toDoItem = new ToDoItem(name, user);
+        
+        _botTasks.Add(toDoItem);
+        
+        return toDoItem;
+    }
+
+    public void MarkCompleted(Guid id)
+    {
+        var task = _botTasks.FirstOrDefault(t => t.Id == id);
+
+        if (task != null)
+        {
+            task.State = ToDoItemState.Completed;
+        }
+    }
+
+    public void Delete(Guid id)
+    {
+        _botTasks.RemoveAll(t => t.Id == id);
+    }
 
     /// <summary>
     /// Метод для начала сеанса взаимодействия бота с пользователм
@@ -84,16 +98,18 @@ public class ToDoService : IToDoService
     /// <param name="update"></param>
     public void Help(ITelegramBotClient botClient, Update update)
     {
-        string HelpMessage = @"Бот предоставляет краткую информацию по ключевым словам C# с небольшими примерами. Примеры ключевых слов abstract, event, namespace.
+        string helpMessage = @"Бот предоставляет краткую информацию по ключевым словам C# с небольшими примерами. Примеры ключевых слов abstract, event, namespace.
 Список допустимых команд:
- /start      - старт работы бота
- /help       - подсказка по командам бота (текущий текст)
- /info       - информация по версии и дате версии бота
- /addtask    - добавление новой задачи
- /showtasks  - отображение списка задач
- /removetask - удаление задачи
- /exit       - завершение работы с ботом";
-        botClient.SendMessage(update.Message.Chat, Replay(HelpMessage));
+ /start         - старт работы бота
+ /help          - подсказка по командам бота (текущий текст)
+ /info          - информация по версии и дате версии бота
+ /addtask       - добавление новой задачи
+ /showtasks     - отображение списка задач
+ /removetask    - удаление задачи
+ /completetask  - завершение задачи
+ /showalltasks  - отображение списка задач со статусами
+ /exit          - завершение работы с ботом";
+        botClient.SendMessage(update.Message.Chat, Replay(helpMessage));
     }
     
     /// <summary>
@@ -144,24 +160,24 @@ public class ToDoService : IToDoService
     /// <param name="update"></param>
     public void AddTask(ITelegramBotClient botClient, Update update, string description)
     {
-        
-        if (BotTasks.Count >= taskCountLimit)
+        CheckTasks(botClient, update);
+        if (_botTasks.Count >= _taskCountLimit)
         {
-            throw new TaskCountLimitException((int)taskCountLimit);
+            throw new TaskCountLimitException((int)_taskCountLimit);
         }
         if (!string.IsNullOrEmpty(description))
         {
-            if (description.Length > taskLengthLimit)
+            if (description.Length > _taskLengthLimit)
             {
-                throw new TaskLengthLimitException(description.Length, taskLengthLimit);
+                throw new TaskLengthLimitException(description.Length, _taskLengthLimit);
             }
 
-            if (BotTasks.Any(t => t.Name == description))
+            if (_botTasks.Any(t => t.Name == description))
             {
                 throw new DuplicateTaskException(description);
             }
             
-            BotTasks.Add(new ToDoItem(description, toDoUser));
+            _botTasks.Add(new ToDoItem(description, toDoUser));
             
             botClient.SendMessage(update.Message.Chat,"Задача добавлена.");
         }
@@ -174,13 +190,13 @@ public class ToDoService : IToDoService
     /// <param name="update"></param>
     public void ShowTasks(ITelegramBotClient botClient, Update update)
     {
-        if (BotTasks.Count == 0)
+        if (_botTasks.Count == 0)
         {
             botClient.SendMessage(update.Message.Chat,"Список задач пуст.");
         }
         else
         {
-            foreach (var task in BotTasks.Where(t => t.State == ToDoItemState.Active))
+            foreach (var task in _botTasks.Where(t => t.State == ToDoItemState.Active))
             {
                 botClient.SendMessage(update.Message.Chat,$"{task.Name} - {task.CreatedAt} - {task.Id}");
             }
@@ -196,34 +212,33 @@ public class ToDoService : IToDoService
     {
         ShowTasks(botClient, update);
         
-        if (BotTasks.Count == 0) {
+        if (_botTasks.Count == 0) {
             botClient.SendMessage(update.Message.Chat,"Нет задач к удалению.");
             return;
         }
 
-        string UnallowableNumMessage;
+        string unallowableNumMessage = $"Недопустимое значение для номера задачи \"{taskNumStr}\".\nВведите корректный номер задачи:";
 
         botClient.SendMessage(update.Message.Chat,"Укажите номер задачи, которую Вы хотите удалить:");
 
         while (true)
         {
-            UnallowableNumMessage = $"Недопустимое значение для номера задачи \"{taskNumStr}\".\nВведите корректный номер задачи:";
             if (int.TryParse(taskNumStr, out int TaskNum))
             {
-                if (TaskNum < 1 || TaskNum > BotTasks.Count)
+                if (TaskNum < 1 || TaskNum > _botTasks.Count)
                 {
-                    botClient.SendMessage(update.Message.Chat, UnallowableNumMessage);
+                    botClient.SendMessage(update.Message.Chat, unallowableNumMessage);
                 }
                 else
                 {
-                    BotTasks.RemoveAt(TaskNum - 1);
+                    _botTasks.RemoveAt(TaskNum - 1);
                     botClient.SendMessage(update.Message.Chat,$"Задача под номером {TaskNum} удалена.");
                     break; // Выходим из бесконечного цикла
                 }
             }
             else
             {
-                botClient.SendMessage(update.Message.Chat, UnallowableNumMessage);
+                botClient.SendMessage(update.Message.Chat, unallowableNumMessage);
             }
         }
     }
@@ -231,15 +246,15 @@ public class ToDoService : IToDoService
     /// <summary>
     /// Проверка списка задач на количество и длину задания
     /// </summary>
-    public void checkTasks(ITelegramBotClient botClient, Update update)
+    private void CheckTasks(ITelegramBotClient botClient, Update update)
     {
-        if (taskCountLimit == -1)
+        if (_taskCountLimit == -1)
         {
-            taskCountLimit = GetTasksLimit(botClient, update);
+            _taskCountLimit = GetTasksLimit(botClient, update);
         }
-        if (taskLengthLimit == -1)
+        if (_taskLengthLimit == -1)
         {
-            taskLengthLimit = GetTaskLengthLimit(botClient, update);
+            _taskLengthLimit = GetTaskLengthLimit(botClient, update);
         }
     }
 
@@ -252,9 +267,9 @@ public class ToDoService : IToDoService
     /// <exception cref="ArgumentException"></exception>
     int GetTasksLimit(ITelegramBotClient botClient, Update update)
     {
-        botClient.SendMessage(update.Message.Chat, $"Введите максимально допустимое количество задач ({minCountLimit}-{maxCountLimit}): ");
-        string TasksLimitStr = Console.ReadLine() ?? "";
-        return ParseAndValidateInt(TasksLimitStr, minCountLimit, maxCountLimit);
+        botClient.SendMessage(update.Message.Chat, $"Введите максимально допустимое количество задач ({MinCountLimit}-{MaxCountLimit}): ");
+        string tasksLimitStr = Console.ReadLine() ?? "";
+        return ParseAndValidateInt(tasksLimitStr, MinCountLimit, MaxCountLimit);
     }
     /// <summary>
     /// Выводит текст с запросом на ввод допустимого количества задач. Если введенное значение не входит в указанный диапазон значений, то генерируется исключение
@@ -265,9 +280,9 @@ public class ToDoService : IToDoService
     /// <exception cref="ArgumentException"></exception>
     int GetTaskLengthLimit(ITelegramBotClient botClient, Update update)
     {
-        botClient.SendMessage(update.Message.Chat, $"Введите максимально допустимую длину задачи ({minLengthLimit}-{maxLengthLimit} символов): ");
-        string TaskLengthLimitStr = Console.ReadLine() ?? "";
-        return ParseAndValidateInt(TaskLengthLimitStr, minLengthLimit, maxLengthLimit);
+        botClient.SendMessage(update.Message.Chat, $"Введите максимально допустимую длину задачи ({MinLengthLimit}-{MaxLengthLimit} символов): ");
+        string taskLengthLimitStr = Console.ReadLine() ?? "";
+        return ParseAndValidateInt(taskLengthLimitStr, MinLengthLimit, MaxLengthLimit);
     }
 
     /// <summary>
@@ -283,11 +298,11 @@ public class ToDoService : IToDoService
     {
         ValidateString(str);
 
-        if (!int.TryParse(str, out int TasksLimit) || TasksLimit < min || TasksLimit > max)
+        if (!int.TryParse(str, out int tasksLimit) || tasksLimit < min || tasksLimit > max)
         {
             throw new ArgumentException($"Ожидалось значение от {min} до {max}, а было введено значение \"{str}\"");
         }
-        return TasksLimit;
+        return tasksLimit;
     }
 
     /// <summary>
@@ -302,4 +317,43 @@ public class ToDoService : IToDoService
             throw new ArgumentException($"Недопустимое значение для строки - она не должна быть пустой и не должна содержать только пробельные символы");
         }
     }
+    
+    /// <summary>
+    /// Завершение задачи
+    /// </summary>
+    /// <param name="botClient"></param>
+    /// <param name="update"></param>
+    public void CompleteTask(string stringGuid)
+    {
+        if (Guid.TryParse(stringGuid, out var guid))
+        {
+            MarkCompleted(guid);
+        }
+        else
+        {
+            throw new ArgumentException($"Недопустимое значение для строкового представления Guid - должно состоять 32 цифр, разделенные дефисом");
+        }
+    }
+
+    /// <summary>
+    /// Отображение задач с их статусом
+    /// </summary>
+    /// <param name="botClient"></param>
+    /// <param name="update"></param>
+    public void ShowAllTasks(ITelegramBotClient botClient, Update update)
+    {
+        if (_botTasks.Count == 0)
+        {
+            botClient.SendMessage(update.Message.Chat,Replay("Список задач пуст."));
+        }
+        else
+        {
+            foreach (var task in _botTasks)
+            {
+                botClient.SendMessage(update.Message.Chat,$"({Enum.GetName(task.State)}) {task.Name} - {task.CreatedAt} - {task.Id}");
+            }
+        }
+    }
 }
+
+
