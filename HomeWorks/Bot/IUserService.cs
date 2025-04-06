@@ -2,8 +2,8 @@ namespace Bot;
 
 public interface IUserService
 {
-    User RegisterUser(long telegramUserId, string telegramUserName);
+    ToDoUser RegisterUser(long telegramUserId, string telegramUserName);
     
-    User? GetUser(long telegramUserId);
+    ToDoUser? GetUser(long telegramUserId);
     
 }

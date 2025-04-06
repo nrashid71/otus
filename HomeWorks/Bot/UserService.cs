@@ -2,12 +2,12 @@ namespace Bot;
 
 public class UserService : IUserService
 {
-    public User RegisterUser(long telegramUserId, string telegramUserName)
+    public ToDoUser RegisterUser(long telegramUserId, string telegramUserName)
     {
-        return new User(telegramUserId, telegramUserName);
+        return new ToDoUser(telegramUserId, telegramUserName);
     }
 
-    public User? GetUser(long telegramUserId)
+    public ToDoUser? GetUser(long telegramUserId)
     {
         throw new NotImplementedException();
     }

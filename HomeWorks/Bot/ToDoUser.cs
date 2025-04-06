@@ -1,8 +1,8 @@
 namespace Bot;
 
-public class User
+public class ToDoUser
 {
-    public User(long telegramUserId, string telegramUserName)
+    public ToDoUser(long telegramUserId, string telegramUserName)
     {
         TelegramUserId = telegramUserId;
         TelegramUserName = telegramUserName;
