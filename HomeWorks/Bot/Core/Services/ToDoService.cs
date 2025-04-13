@@ -115,6 +115,7 @@ public class ToDoService : IToDoService
  /completetask  - завершение задачи
  /showalltasks  - отображение списка задач со статусами
  /report        - статистика по задачам
+ /find          - поиск задачи
  /exit          - завершение работы с ботом";
         botClient.SendMessage(update.Message.Chat, Replay(update, helpMessage));
     }
