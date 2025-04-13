@@ -5,7 +5,7 @@ public class ToDoItem
     private ToDoItemState _state;
     public Guid Id { get; init; }
     public ToDoUser ToDoUser { get; init; }
-    public string Name { get; init; }
+    public string Name { get; set; }
     public DateTime CreatedAt { get; init; }
 
     public ToDoItemState State

@@ -5,7 +5,13 @@ public class UserService : IUserService
     InMemoryUserRepository _userRepository = new InMemoryUserRepository();
     public ToDoUser RegisterUser(long telegramUserId, string telegramUserName)
     {
-        return GetUser(telegramUserId) ?? new ToDoUser(telegramUserId, telegramUserName);
+        var toDoUser = GetUser(telegramUserId);
+        if (toDoUser == null)
+        {
+            toDoUser = new ToDoUser(telegramUserId, telegramUserName);
+            _userRepository.Add(toDoUser);
+        }
+        return toDoUser;
     }
 
     public ToDoUser? GetUser(long telegramUserId)

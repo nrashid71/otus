@@ -8,7 +8,18 @@ public class ToDoService : IToDoService
     /// <summary>
     /// Список задач
     /// </summary>
-    List<ToDoItem> _botTasks = new List<ToDoItem>();
+    InMemoryToDoRepository _botTasks = new InMemoryToDoRepository();
+    
+    InMemoryToDoRepository InMemoryToDoRepository
+    {
+        get => _botTasks;
+    }
+    /// <summary>
+    /// Сервис по упралению пользователями
+    /// </summary>
+    UserService _userService = new UserService();
+    
+    public UserService UserService {get => _userService;}
     /// <summary>
     /// Максимальное количество задач, указанное пользователем. Значение -1 указывает на то, что атрибут не проинициализирован пользователем через запрос.
     /// </summary>
@@ -38,35 +49,30 @@ public class ToDoService : IToDoService
     /// </summary>
     const int MaxLengthLimit = 100;
 
-    public ToDoService(ToDoUser? toDoUser)
-    {
-        this.toDoUser = toDoUser;
-    }
-
-    public ToDoUser? toDoUser { get; set; }
+//    public ToDoUser? toDoUser { get; set; }
 
     public IReadOnlyList<ToDoItem> GetAllByUserId(Guid userId)
     {
-        return _botTasks.Where(t => t.ToDoUser.UserId == userId).ToList().AsReadOnly();
+        return InMemoryToDoRepository.GetAllByUserId(userId);
     }
 
     public IReadOnlyList<ToDoItem> GetActiveByUserId(Guid userId)
     {
-        return _botTasks.Where(t => t.ToDoUser.UserId == userId && t.State == ToDoItemState.Active).ToList().AsReadOnly();
+        return InMemoryToDoRepository.GetActiveByUserId(userId);
     }
 
     public ToDoItem Add(ToDoUser user, string name)
     {
         ToDoItem toDoItem = new ToDoItem(name, user);
         
-        _botTasks.Add(toDoItem);
+        InMemoryToDoRepository.Add(toDoItem);
         
         return toDoItem;
     }
 
     public void MarkCompleted(Guid id)
     {
-        var task = _botTasks.FirstOrDefault(t => t.Id == id);
+        var task = InMemoryToDoRepository.GetByGuid(id);
 
         if (task != null)
         {
@@ -76,7 +82,7 @@ public class ToDoService : IToDoService
 
     public void Delete(Guid id)
     {
-        _botTasks.RemoveAll(t => t.Id == id);
+        InMemoryToDoRepository.Delete(id);
     }
 
     /// <summary>
@@ -88,7 +94,7 @@ public class ToDoService : IToDoService
     public void Start(ITelegramBotClient botClient, Update update)
     {
         var from = update?.Message?.From;
-        toDoUser = (new UserService()).RegisterUser(from?.Id ?? 0, from?.Username);
+        var toDoUser = _userService.RegisterUser(from?.Id ?? 0, from?.Username);
     }
     
     /// <summary>
@@ -108,8 +114,9 @@ public class ToDoService : IToDoService
  /removetask    - удаление задачи
  /completetask  - завершение задачи
  /showalltasks  - отображение списка задач со статусами
+ /report        - статистика по задачам
  /exit          - завершение работы с ботом";
-        botClient.SendMessage(update.Message.Chat, Replay(helpMessage));
+        botClient.SendMessage(update.Message.Chat, Replay(update, helpMessage));
     }
     
     /// <summary>
@@ -123,7 +130,7 @@ public class ToDoService : IToDoService
     {
         if (!string.IsNullOrEmpty(str))
         {
-            botClient.SendMessage(update.Message.Chat,Replay($"Команда {str} не предусмотрена к обработке."));
+            botClient.SendMessage(update.Message.Chat,Replay(update,$"Команда {str} не предусмотрена к обработке."));
             botClient.SendMessage(update.Message.Chat,infoMessage);
         }
     }
@@ -135,7 +142,7 @@ public class ToDoService : IToDoService
     /// <param name="update"></param>
     public void Info(ITelegramBotClient botClient, Update update)
     {
-        botClient.SendMessage(update.Message.Chat,Replay("Версия программы 0.1.0-alpha. Дата создания 22.02.2025."));
+        botClient.SendMessage(update.Message.Chat,Replay(update,"Версия программы 0.1.0-alpha. Дата создания 22.02.2025."));
     }
     
     /// <summary>
@@ -144,8 +151,9 @@ public class ToDoService : IToDoService
     /// </summary>
     /// <param name="message">Текст сообщения</param>
     /// <returns></returns>
-    string Replay (string message)
+    string Replay (Update update, string message)
     {
+        var toDoUser = UserService.GetUser(update.Message.From.Id);
         if (toDoUser == null || string.IsNullOrEmpty(toDoUser.TelegramUserName))
         {
             return message;
@@ -161,7 +169,8 @@ public class ToDoService : IToDoService
     public void AddTask(ITelegramBotClient botClient, Update update, string description)
     {
         CheckTasks(botClient, update);
-        if (_botTasks.Count >= _taskCountLimit)
+        var userId = _userService.GetUser(update.Message.From.Id).UserId;
+        if (InMemoryToDoRepository.GetCount(userId) >= _taskCountLimit)
         {
             throw new TaskCountLimitException((int)_taskCountLimit);
         }
@@ -172,12 +181,12 @@ public class ToDoService : IToDoService
                 throw new TaskLengthLimitException(description.Length, _taskLengthLimit);
             }
 
-            if (_botTasks.Any(t => t.Name == description))
+            if (InMemoryToDoRepository.ExistsByName(userId, description))
             {
                 throw new DuplicateTaskException(description);
             }
             
-            _botTasks.Add(new ToDoItem(description, toDoUser));
+            InMemoryToDoRepository.Add(new ToDoItem(description, UserService.GetUser(update.Message.From.Id)));
             
             botClient.SendMessage(update.Message.Chat,"Задача добавлена.");
         }
@@ -190,13 +199,14 @@ public class ToDoService : IToDoService
     /// <param name="update"></param>
     public void ShowTasks(ITelegramBotClient botClient, Update update)
     {
-        if (_botTasks.Count == 0)
+        var userId = _userService.GetUser(update.Message.From.Id).UserId;
+        if (InMemoryToDoRepository.GetCount(userId) == 0)
         {
             botClient.SendMessage(update.Message.Chat,"Список задач пуст.");
         }
         else
         {
-            foreach (var task in _botTasks.Where(t => t.State == ToDoItemState.Active))
+            foreach (var task in InMemoryToDoRepository.GetActiveByUserId(userId))
             {
                 botClient.SendMessage(update.Message.Chat,$"{task.Name} - {task.CreatedAt} - {task.Id}");
             }
@@ -208,38 +218,27 @@ public class ToDoService : IToDoService
     /// </summary>
     /// <param name="botClient"></param>
     /// <param name="update"></param>
-    public void RemoveTask(ITelegramBotClient botClient, Update update, string taskNumStr)
+    public void RemoveTask(ITelegramBotClient botClient, Update update, string stringGuid)
     {
         ShowTasks(botClient, update);
         
-        if (_botTasks.Count == 0) {
-            botClient.SendMessage(update.Message.Chat,"Нет задач к удалению.");
+        var userId = _userService.GetUser(update.Message.From.Id).UserId;
+        
+        if (InMemoryToDoRepository.GetCount(userId) == 0) {
+            botClient.SendMessage(update.Message.Chat,"Список задач пуст, удалять нечего.");
             return;
         }
 
-        string unallowableNumMessage = $"Недопустимое значение для номера задачи \"{taskNumStr}\".\nВведите корректный номер задачи:";
-
         botClient.SendMessage(update.Message.Chat,"Укажите номер задачи, которую Вы хотите удалить:");
-
-        while (true)
+                
+        if (Guid.TryParse(stringGuid, out var guid))
         {
-            if (int.TryParse(taskNumStr, out int TaskNum))
-            {
-                if (TaskNum < 1 || TaskNum > _botTasks.Count)
-                {
-                    botClient.SendMessage(update.Message.Chat, unallowableNumMessage);
-                }
-                else
-                {
-                    _botTasks.RemoveAt(TaskNum - 1);
-                    botClient.SendMessage(update.Message.Chat,$"Задача под номером {TaskNum} удалена.");
-                    break; // Выходим из бесконечного цикла
-                }
-            }
-            else
-            {
-                botClient.SendMessage(update.Message.Chat, unallowableNumMessage);
-            }
+            InMemoryToDoRepository.Delete(guid);
+            botClient.SendMessage(update.Message.Chat,$"Задача с id \"{stringGuid}\" удалена.");
+        }
+        else
+        {
+            botClient.SendMessage(update.Message.Chat, $"Задачи с id \"{stringGuid}\" нет.");
         }
     }
 
@@ -342,18 +341,36 @@ public class ToDoService : IToDoService
     /// <param name="update"></param>
     public void ShowAllTasks(ITelegramBotClient botClient, Update update)
     {
-        if (_botTasks.Count == 0)
+        var userId = _userService.GetUser(update.Message.From.Id).UserId;
+        
+        if (InMemoryToDoRepository.GetCount(userId) == 0)
         {
-            botClient.SendMessage(update.Message.Chat,Replay("Список задач пуст."));
+            botClient.SendMessage(update.Message.Chat,Replay(update,"Список задач пуст."));
         }
         else
         {
-            foreach (var task in _botTasks)
+            foreach (var task in InMemoryToDoRepository.GetAllByUserId(userId))
             {
                 botClient.SendMessage(update.Message.Chat,$"({Enum.GetName(task.State)}) {task.Name} - {task.CreatedAt} - {task.Id}");
             }
         }
     }
+    /// <summary>
+    /// Статистика по задачам
+    /// </summary>
+    /// <param name="botClient"></param>
+    /// <param name="update"></param>
+    public void Report(ITelegramBotClient botClient, Update update)
+    {
+        var ( total, completed, active, generatedAt)
+                = (new ToDoReportService(InMemoryToDoRepository)).GetUserStats(_userService.GetUser(update.Message.From.Id).UserId);
+        
+        botClient.SendMessage(update.Message.Chat,$"Статистика по задачам на {generatedAt}." +
+                                                  $" Всего: {total};" +
+                                                  $" Завершенных: {completed}" +
+                                                  $" Активных: {active};");
+    }
+    
 }
 
 

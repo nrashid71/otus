@@ -6,24 +6,16 @@ namespace Bot;
 public class UpdateHandler : IUpdateHandler
 {
 
-    private List<string> _registredUserCommands = new List<string>() {"/addtask","/showtask","/removetask","/completetask","/showalltasks","/exit","/start"};
+    private List<string> _registredUserCommands = new List<string>() {"/addtask","/showtask","/removetask","/completetask","/showalltasks","/exit","/start","/report"};
 
-    private IToDoService _toDoService;
-    public UpdateHandler()
-    {
-        _toDoService = new ToDoService(null);
-    }
-    public UpdateHandler(ToDoUser toDoUser)
-    {
-        _toDoService = new ToDoService(toDoUser);
-    }
-
+    private IToDoService _toDoService  = new ToDoService();
     public void HandleUpdateAsync(ITelegramBotClient botClient, Update update)
     {
         string botCommand;
-        string InfoMessage = "Вам доступны команды: start, help, info, addtask, showtasks, removetask, completetask, showalltasks, exit. При вводе команды указываейте вначале символ / (слеш).";
+        string InfoMessage = "Вам доступны команды: start, help, info, addtask, showtasks, removetask, completetask, showalltasks, report, exit. При вводе команды указываейте вначале символ / (слеш).";
 //        botClient.SendMessage(update.Message.Chat,"Здравствуйте!");
 //        botClient.SendMessage(update.Message.Chat,InfoMessage);
+        var toDoUser = ((ToDoService)_toDoService).UserService.GetUser(update.Message.From.Id);
         try
         {
             botClient.SendMessage(update.Message.Chat,"Введите команду:");
@@ -36,17 +28,17 @@ public class UpdateHandler : IUpdateHandler
             case "/info":
                 ((ToDoService)_toDoService).Info(botClient, update);
                 break;
+            case "/start":
+                ((ToDoService)_toDoService).Start(botClient, update);
+                break;
             default:
                 var idx = botCommand.IndexOf(" ");
                 if (_registredUserCommands.Contains(botCommand.Substring(0, idx == -1 ? botCommand.Length : idx).Trim()))
                 {
-                    if (((ToDoService)_toDoService).toDoUser != null)
+                    if ( toDoUser != null)
                     {
                         switch (botCommand)
                         {
-                            case "/start":
-                                ((ToDoService)_toDoService).Start(botClient, update);
-                                break;
                             case "/exit":
                                 Environment.Exit(0);
                                 break;
@@ -67,6 +59,9 @@ public class UpdateHandler : IUpdateHandler
                                 break;
                             case "/showalltasks":
                                 ((ToDoService)_toDoService).ShowAllTasks(botClient, update);
+                                break;
+                            case "/report":
+                                ((ToDoService)_toDoService).Report(botClient, update);
                                 break;
                         }
                     }
