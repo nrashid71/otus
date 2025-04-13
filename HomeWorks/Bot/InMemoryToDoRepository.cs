@@ -50,5 +50,8 @@ public class InMemoryToDoRepository : IToDoRepository
     public int CountActive(Guid userId) => _toDoItems.Count();
     public ToDoItem? GetByGuid(Guid id) => _toDoItems.FirstOrDefault(i => i.Id == id);
     public int GetCount(Guid userId) => _toDoItems.Count();
-
+    public IReadOnlyList<ToDoItem> Find(Guid userId, Func<ToDoItem, bool> predicate)
+    {
+        return _toDoItems.Where(t => t.ToDoUser.UserId == userId && predicate(t)).ToList().AsReadOnly();
+    }
 }

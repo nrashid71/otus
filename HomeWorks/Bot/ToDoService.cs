@@ -370,6 +370,25 @@ public class ToDoService : IToDoService
                                                   $" Завершенных: {completed}" +
                                                   $" Активных: {active};");
     }
+
+    public IReadOnlyList<ToDoItem> Find(ToDoUser user, string namePrefix)
+    {
+        return InMemoryToDoRepository.Find(user.UserId, (t) => t.Name.StartsWith(namePrefix)).ToList()
+            .AsReadOnly();
+    }
+    
+    /// <summary>
+    /// Поиск задач
+    /// </summary>
+    /// <param name="botClient"></param>
+    /// <param name="update"></param>
+    public void Find(ITelegramBotClient botClient, Update update, string namePrefix)
+    {
+        foreach (var task in Find(_userService.GetUser(update.Message.From.Id), namePrefix))
+        {
+            botClient.SendMessage(update.Message.Chat,$"{task.Name} - {task.CreatedAt} - {task.Id}");
+        }
+    }
     
 }
 

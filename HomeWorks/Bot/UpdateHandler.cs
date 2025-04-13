@@ -6,13 +6,13 @@ namespace Bot;
 public class UpdateHandler : IUpdateHandler
 {
 
-    private List<string> _registredUserCommands = new List<string>() {"/addtask","/showtask","/removetask","/completetask","/showalltasks","/exit","/start","/report"};
+    private List<string> _registredUserCommands = new List<string>() {"/addtask","/showtask","/removetask","/completetask","/showalltasks","/exit","/start","/report","/find"};
 
     private IToDoService _toDoService  = new ToDoService();
     public void HandleUpdateAsync(ITelegramBotClient botClient, Update update)
     {
         string botCommand;
-        string InfoMessage = "Вам доступны команды: start, help, info, addtask, showtasks, removetask, completetask, showalltasks, report, exit. При вводе команды указываейте вначале символ / (слеш).";
+        string InfoMessage = "Вам доступны команды: start, help, info, addtask, showtasks, removetask, completetask, showalltasks, report, find, exit. При вводе команды указываейте вначале символ / (слеш).";
 //        botClient.SendMessage(update.Message.Chat,"Здравствуйте!");
 //        botClient.SendMessage(update.Message.Chat,InfoMessage);
         var toDoUser = ((ToDoService)_toDoService).UserService.GetUser(update.Message.From.Id);
@@ -62,6 +62,9 @@ public class UpdateHandler : IUpdateHandler
                                 break;
                             case "/report":
                                 ((ToDoService)_toDoService).Report(botClient, update);
+                                break;
+                            case string bc when bc.StartsWith("/find "):
+                                ((ToDoService)_toDoService).Find(botClient, update, botCommand.Substring("/find ".Length));
                                 break;
                         }
                     }
