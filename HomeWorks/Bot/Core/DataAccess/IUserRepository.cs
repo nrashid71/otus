@@ -4,7 +4,7 @@ namespace Bot;
 
 public interface IUserRepository
 {
-    User? GetUser(Guid userId);
-    User? GetUserByTelegramUserId(long telegramUserId);
+    ToDoUser? GetUser(Guid userId);
+    ToDoUser? GetUserByTelegramUserId(long telegramUserId);
     void Add(ToDoUser user);
 }

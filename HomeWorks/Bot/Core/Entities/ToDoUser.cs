@@ -4,7 +4,6 @@ namespace Bot;
 
 public class ToDoUser
 {
-    public User? User { get; set; }
     public ToDoUser(long telegramUserId, string telegramUserName)
     {
         TelegramUserId = telegramUserId;
@@ -15,7 +14,6 @@ public class ToDoUser
     {
         TelegramUserId = user.Id;
         TelegramUserName = user.Username;
-        User = user;
     }
 
     public Guid UserId { get; init; }

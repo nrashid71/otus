@@ -6,14 +6,14 @@ public class InMemoryUserRepository : IUserRepository
 {
     private List<ToDoUser> _users = new List<ToDoUser>();
 
-    public User? GetUser(Guid userId)
+    public ToDoUser? GetUser(Guid userId)
     {
-        return _users.FirstOrDefault(u => u.UserId == userId)?.User;
+        return _users.FirstOrDefault(u => u.UserId == userId);
     }
 
-    public User? GetUserByTelegramUserId(long telegramUserId)
+    public ToDoUser? GetUserByTelegramUserId(long telegramUserId)
     {
-        return _users.FirstOrDefault(u => u.TelegramUserId == telegramUserId)?.User;
+        return _users.FirstOrDefault(u => u.TelegramUserId == telegramUserId);
     }
 
     public void Add(ToDoUser user)
