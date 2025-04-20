@@ -33,6 +33,7 @@ public class ToDoService : IToDoService
         if (task != null)
         {
             task.State = ToDoItemState.Completed;
+            // InMemoryToDoRepository.Update(task);
         }
     }
     
