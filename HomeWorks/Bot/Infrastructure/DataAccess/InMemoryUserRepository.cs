@@ -20,10 +20,4 @@ public class InMemoryUserRepository : IUserRepository
     {
         _users.Add(user);
     }
-    
-    public ToDoUser? GetToDoUserByTelegramUserId(long telegramUserId)
-    {
-        return _users.FirstOrDefault(u => u.TelegramUserId == telegramUserId);
-    }
-    
 }

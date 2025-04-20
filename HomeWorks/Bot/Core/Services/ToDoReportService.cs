@@ -2,18 +2,18 @@ namespace Bot;
 
 public class ToDoReportService: IToDoReportService
 {
-    InMemoryToDoRepository _botTasks;
+    IToDoService _toDoService;
 
-    public ToDoReportService(InMemoryToDoRepository inMemoryToDoRepository)
+    public ToDoReportService(IToDoService toDoService)
     {
-        _botTasks = inMemoryToDoRepository;
+        _toDoService = toDoService;
     }
 
     public (int total, int completed, int active, DateTime generatedAt) GetUserStats(Guid userId)
     {
-        return (total: _botTasks.GetCount(userId),
-            completed: _botTasks.GetCount(userId)-_botTasks.CountActive(userId),
-            active: _botTasks.CountActive(userId),
+        return (total: _toDoService.GetAllByUserId(userId).Count,
+            completed: _toDoService.GetAllByUserId(userId).Count - _toDoService.GetActiveByUserId(userId).Count,
+            active: _toDoService.GetActiveByUserId(userId).Count,
             generatedAt: DateTime.Now);
     }
 }
