@@ -2,7 +2,13 @@ namespace Bot;
 
 public class UserService : IUserService
 {
-    IUserRepository _userRepository = new InMemoryUserRepository();
+    IUserRepository _userRepository;
+
+    public UserService(IUserRepository inMemoryUserRepository)
+    {
+        _userRepository = inMemoryUserRepository;
+    }
+
     public ToDoUser RegisterUser(long telegramUserId, string telegramUserName)
     {
         var toDoUser = GetUser(telegramUserId);

@@ -11,7 +11,13 @@ namespace Bot
         {
             try
             {
-                var handler = new UpdateHandler();
+                IToDoRepository inMemoryToDoRepository = new InMemoryToDoRepository();
+                IToDoService toDoService = new ToDoService(inMemoryToDoRepository);
+                
+                IUserRepository inMemoryUserRepository = new InMemoryUserRepository();
+                IUserService userService = new UserService(inMemoryUserRepository);
+                
+                var handler = new UpdateHandler(toDoService, userService);
                 var botClient = new ConsoleBotClient();
                 botClient.StartReceiving(handler);
             }

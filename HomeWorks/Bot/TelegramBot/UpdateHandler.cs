@@ -8,8 +8,9 @@ public class UpdateHandler : IUpdateHandler
 
     private List<string> _registredUserCommands = new List<string>() {"/addtask","/showtask","/removetask","/completetask","/showalltasks","/exit","/start","/report","/find"};
 
-    private IToDoService ToDoService { get; } = new ToDoService();
-    private IUserService UserService { get; } = new UserService();
+    private IToDoService ToDoService { get; }
+    
+    private IUserService UserService { get; }
 
     /// <summary>
     /// Максимальное количество задач, указанное пользователем. Значение -1 указывает на то, что атрибут не проинициализирован пользователем через запрос.
@@ -39,7 +40,13 @@ public class UpdateHandler : IUpdateHandler
     /// Правая граница диапазона допустимой длины задач.
     /// </summary>
     const int MaxLengthLimit = 100;
-    
+
+    public UpdateHandler(IToDoService toDoService, IUserService userService)
+    {
+        ToDoService = toDoService;
+        UserService = userService;
+    }
+
     public void HandleUpdateAsync(ITelegramBotClient botClient, Update update)
     {
         string botCommand;

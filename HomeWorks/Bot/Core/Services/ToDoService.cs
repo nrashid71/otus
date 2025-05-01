@@ -5,8 +5,13 @@ using Otus.ToDoList.ConsoleBot.Types;
 namespace Bot;
 public class ToDoService : IToDoService
 {
-    private IToDoRepository InMemoryToDoRepository { get; } = new InMemoryToDoRepository();
-    
+    private IToDoRepository InMemoryToDoRepository { get; }
+
+    public ToDoService(IToDoRepository inMemoryToDoRepository)
+    {
+        InMemoryToDoRepository = inMemoryToDoRepository;
+    }
+
     public IReadOnlyList<ToDoItem> GetAllByUserId(Guid userId)
     {
         return InMemoryToDoRepository.GetAllByUserId(userId);
