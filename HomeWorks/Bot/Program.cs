@@ -19,7 +19,9 @@ namespace Bot
                 
                 var handler = new UpdateHandler(toDoService, userService);
                 var botClient = new ConsoleBotClient();
-                botClient.StartReceiving(handler);
+
+                var ct = new CancellationTokenSource();
+                botClient.StartReceiving(handler, ct.Token);
             }
             catch (Exception ex)
             {
