@@ -3,6 +3,7 @@ using Otus.ToDoList.ConsoleBot.Types;
 
 namespace Bot;
 
+public delegate void MessageEventHandler(string message);
 public class UpdateHandler : IUpdateHandler
 {
     private List<string> _registredUserCommands = new List<string>() {"/addtask","/showtask","/removetask","/completetask","/showalltasks","/exit","/start","/report","/find"};
@@ -45,6 +46,18 @@ public class UpdateHandler : IUpdateHandler
         ToDoService = toDoService;
         UserService = userService;
     }
+    
+    public event MessageEventHandler? UpdateStarted;
+    public void OnHandleUpdateStarted(string message)
+    {
+        Console.WriteLine($"Началась обработка сообщения '{message}'");
+    }
+    public event MessageEventHandler? UpdateCompleted;
+    public void OnHandleUpdateCompleted(string message)
+    {
+        Console.WriteLine($"Закончилась обработка сообщения '{message}'");
+    }
+    
     public Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken ct)
     {
         Console.WriteLine($"HandleError: {exception})");
@@ -57,76 +70,81 @@ public class UpdateHandler : IUpdateHandler
         var toDoUser = UserService.GetUser(update.Message.From.Id);
         try
         {
-            await botClient.SendMessage(update.Message.Chat,"Введите команду:", ct);
+            await botClient.SendMessage(update.Message.Chat, "Введите команду:", ct);
             botCommand = Console.ReadLine() ?? "";
+            UpdateStarted.Invoke(botCommand);
             switch (botCommand)
             {
-            case "/help":
-                await HelpAsync(botClient, update, ct);
-                break;
-            case "/info":
-                await InfoAsync(botClient, update, ct);
-                break;
-            case "/start":
-                Start(botClient, update);
-                break;
-            default:
-                var idx = botCommand.IndexOf(" ");
-                if (_registredUserCommands.Contains(botCommand.Substring(0, idx == -1 ? botCommand.Length : idx).Trim()))
-                {
-                    if ( toDoUser != null)
+                case "/help":
+                    await HelpAsync(botClient, update, ct);
+                    break;
+                case "/info":
+                    await InfoAsync(botClient, update, ct);
+                    break;
+                case "/start":
+                    Start(botClient, update);
+                    break;
+                default:
+                    var idx = botCommand.IndexOf(" ");
+                    if (_registredUserCommands.Contains(botCommand.Substring(0, idx == -1 ? botCommand.Length : idx)
+                            .Trim()))
                     {
-                        switch (botCommand)
+                        if (toDoUser != null)
                         {
-                            case "/exit":
-                                Environment.Exit(0);
-                                break;
-                            case string bc when bc.StartsWith("/addtask "):
-                                await AddTaskAsync(botClient, update,botCommand.Substring("/addtask ".Length), ct);
-                                break;
-                            case "/showtask":
-                                await ShowTasksAsync(botClient, update, ct);
-                                break;
-                            case string bc when bc.StartsWith("/removetask "):
-                                await RemoveTaskAsync(botClient, update, botCommand.Substring("/removetask ".Length), ct);
-                                break;
-                            case string bc when bc.StartsWith("/completetask "):
-                                CompleteTask(botCommand.Substring("/completetask ".Length));
-                                break;
-                            case "/showalltasks":
-                                await ShowAllTasksAsync(botClient, update, ct);
-                                break;
-                            case "/report":
-                                await ReportAsync(botClient, update, ct);
-                                break;
-                            case string bc when bc.StartsWith("/find "):
-                                await FindAsync(botClient, update, botCommand.Substring("/find ".Length), ct);
-                                break;
+                            switch (botCommand)
+                            {
+                                case "/exit":
+                                    Environment.Exit(0);
+                                    break;
+                                case string bc when bc.StartsWith("/addtask "):
+                                    await AddTaskAsync(botClient, update, botCommand.Substring("/addtask ".Length), ct);
+                                    break;
+                                case "/showtask":
+                                    await ShowTasksAsync(botClient, update, ct);
+                                    break;
+                                case string bc when bc.StartsWith("/removetask "):
+                                    await RemoveTaskAsync(botClient, update,
+                                        botCommand.Substring("/removetask ".Length), ct);
+                                    break;
+                                case string bc when bc.StartsWith("/completetask "):
+                                    CompleteTask(botCommand.Substring("/completetask ".Length));
+                                    break;
+                                case "/showalltasks":
+                                    await ShowAllTasksAsync(botClient, update, ct);
+                                    break;
+                                case "/report":
+                                    await ReportAsync(botClient, update, ct);
+                                    break;
+                                case string bc when bc.StartsWith("/find "):
+                                    await FindAsync(botClient, update, botCommand.Substring("/find ".Length), ct);
+                                    break;
+                            }
                         }
                     }
-                }
-                else
-                {
-                    await NonCommandAsync(botClient, update, botCommand, InfoMessage, ct);
-                }
-                break;
+                    else
+                    {
+                        await NonCommandAsync(botClient, update, botCommand, InfoMessage, ct);
+                    }
+
+                    break;
             }
+            UpdateCompleted.Invoke(botCommand);
         }
         catch (DuplicateTaskException ex)
         {
-            await botClient.SendMessage(update.Message.Chat,ex.Message, ct);
+            await botClient.SendMessage(update.Message.Chat, ex.Message, ct);
         }
         catch (TaskCountLimitException ex)
         {
-            await botClient.SendMessage(update.Message.Chat,ex.Message, ct);
+            await botClient.SendMessage(update.Message.Chat, ex.Message, ct);
         }
         catch (TaskLengthLimitException ex)
         {
-            await botClient.SendMessage(update.Message.Chat,ex.Message, ct);
+            await botClient.SendMessage(update.Message.Chat, ex.Message, ct);
         }
         catch (ArgumentException ex)
         {
-            await botClient.SendMessage(update.Message.Chat,ex.Message, ct);
+            await botClient.SendMessage(update.Message.Chat, ex.Message, ct);
         }
     }
 

@@ -9,15 +9,18 @@ namespace Bot
     {
         static void Main(string[] args)
         {
+            IToDoRepository inMemoryToDoRepository = new InMemoryToDoRepository();
+            IToDoService toDoService = new ToDoService(inMemoryToDoRepository);
+
+            IUserRepository inMemoryUserRepository = new InMemoryUserRepository();
+            IUserService userService = new UserService(inMemoryUserRepository);
+
+            var handler = new UpdateHandler(toDoService, userService);
             try
             {
-                IToDoRepository inMemoryToDoRepository = new InMemoryToDoRepository();
-                IToDoService toDoService = new ToDoService(inMemoryToDoRepository);
-                
-                IUserRepository inMemoryUserRepository = new InMemoryUserRepository();
-                IUserService userService = new UserService(inMemoryUserRepository);
-                
-                var handler = new UpdateHandler(toDoService, userService);
+                handler.UpdateStarted += handler.OnHandleUpdateStarted;
+                handler.UpdateCompleted += handler.OnHandleUpdateCompleted;
+
                 var botClient = new ConsoleBotClient();
 
                 var ct = new CancellationTokenSource();
@@ -25,7 +28,13 @@ namespace Bot
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Произошла непредвиденная ошибка:\n {ex.GetType()}\n {ex.Message}\n {ex.StackTrace}\n {ex.InnerException}");
+                Console.WriteLine(
+                    $"Произошла непредвиденная ошибка:\n {ex.GetType()}\n {ex.Message}\n {ex.StackTrace}\n {ex.InnerException}");
+            }
+            finally
+            {
+                handler.UpdateStarted -= handler.OnHandleUpdateStarted;
+                handler.UpdateCompleted -= handler.OnHandleUpdateCompleted;
             }
         }
     }
