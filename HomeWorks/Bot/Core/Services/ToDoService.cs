@@ -12,28 +12,30 @@ public class ToDoService : IToDoService
         InMemoryToDoRepository = inMemoryToDoRepository;
     }
 
-    public IReadOnlyList<ToDoItem> GetAllByUserId(Guid userId)
+    public async Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId)
     {
-        return InMemoryToDoRepository.GetAllByUserId(userId);
+        var result = await InMemoryToDoRepository.GetAllByUserId(userId);
+        return result;
     }
 
-    public IReadOnlyList<ToDoItem> GetActiveByUserId(Guid userId)
+    public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId)
     {
-        return InMemoryToDoRepository.GetActiveByUserId(userId);
+        var result = await InMemoryToDoRepository.GetActiveByUserId(userId);
+        return result;
     }
 
-    public ToDoItem Add(ToDoUser user, string name)
+    public async Task<ToDoItem> Add(ToDoUser user, string name)
     {
         ToDoItem toDoItem = new ToDoItem(name, user);
         
-        InMemoryToDoRepository.Add(toDoItem);
+        await InMemoryToDoRepository.Add(toDoItem);
         
         return toDoItem;
     }
 
-    public void MarkCompleted(Guid id)
+    public async Task MarkCompleted(Guid id)
     {
-        var task = ((InMemoryToDoRepository)InMemoryToDoRepository).GetByGuid(id);
+        var task = await ((InMemoryToDoRepository)InMemoryToDoRepository).GetByGuid(id);
 
         if (task != null)
         {
@@ -42,14 +44,16 @@ public class ToDoService : IToDoService
         }
     }
     
-    public void Delete(Guid id)
+    public async Task Delete(Guid id)
     {
-        InMemoryToDoRepository.Delete(id);
+        await InMemoryToDoRepository.Delete(id);
     }
-    
-    public IReadOnlyList<ToDoItem> Find(ToDoUser user, string namePrefix) =>
-         InMemoryToDoRepository.Find(user.UserId, (t) => t.Name.StartsWith(namePrefix)).ToList().AsReadOnly();
-    
+
+    public async Task<IReadOnlyList<ToDoItem>> Find(ToDoUser user, string namePrefix)
+    {
+        var r = await InMemoryToDoRepository.Find(user.UserId, (t) => t.Name.StartsWith(namePrefix));
+        return r.ToList().AsReadOnly();
+    }
 }
 
 

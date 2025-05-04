@@ -11,9 +11,9 @@ public class ToDoReportService: IToDoReportService
 
     public (int total, int completed, int active, DateTime generatedAt) GetUserStats(Guid userId)
     {
-        return (total: _toDoService.GetAllByUserId(userId).Count,
-            completed: _toDoService.GetAllByUserId(userId).Count - _toDoService.GetActiveByUserId(userId).Count,
-            active: _toDoService.GetActiveByUserId(userId).Count,
+        return (total: _toDoService.GetAllByUserId(userId).Result.Count,
+            completed: _toDoService.GetAllByUserId(userId).Result.Count - _toDoService.GetActiveByUserId(userId).Result.Count,
+            active: _toDoService.GetActiveByUserId(userId).Result.Count,
             generatedAt: DateTime.Now);
     }
 }
