@@ -9,15 +9,15 @@ public class InMemoryToDoRepository : IToDoRepository
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
-    public ToDoItem? GetByGuid(Guid id) => _toDoItems.FirstOrDefault(i => i.Id == id);
-    
-    public IReadOnlyList<ToDoItem> GetAllByUserId(Guid userId) =>
+    public async Task<ToDoItem?> GetByGuid(Guid id) => _toDoItems.FirstOrDefault(i => i.Id == id);
+
+    public async Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId) =>
         _toDoItems.Where(i => i.ToDoUser.UserId == userId).ToList().AsReadOnly();
 
-    public IReadOnlyList<ToDoItem> GetActiveByUserId(Guid userId) =>
+    public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId) =>
          _toDoItems.Where(i => i.ToDoUser.UserId == userId && i.State == ToDoItemState.Active).ToList().AsReadOnly();
 
-    public void Add(ToDoItem item)
+    public async Task Add(ToDoItem item)
     {
         if (GetByGuid(item.Id) == null)
         {
@@ -29,9 +29,9 @@ public class InMemoryToDoRepository : IToDoRepository
         }
     }
 
-    public void Update(ToDoItem item)
+    public async Task Update(ToDoItem item)
     {
-        var i = GetByGuid(item.Id);
+        var i = await GetByGuid(item.Id);
         if (i != null)
         {
             i.State = item.State;
@@ -43,19 +43,19 @@ public class InMemoryToDoRepository : IToDoRepository
         }
     }
 
-    public void Delete(Guid id)
+    public async Task Delete(Guid id)
     {
-        var i = GetByGuid(id);
+        var i = await GetByGuid(id);
         if (i != null)
         {
             _toDoItems.Remove(i);
         }
     }
 
-    public bool ExistsByName(Guid userId, string name) => _toDoItems.Any(i => i.Name == name);
+    public async Task<bool> ExistsByName(Guid userId, string name) => _toDoItems.Any(i => i.Name == name);
 
-    public int CountActive(Guid userId) => _toDoItems.Count(i => i.State == ToDoItemState.Active);
-    public IReadOnlyList<ToDoItem> Find(Guid userId, Func<ToDoItem, bool> predicate)
+    public async Task<int> CountActive(Guid userId) => _toDoItems.Count(i => i.State == ToDoItemState.Active);
+    public async Task<IReadOnlyList<ToDoItem>> Find(Guid userId, Func<ToDoItem, bool> predicate)
     {
         return _toDoItems.Where(t => t.ToDoUser.UserId == userId && predicate(t)).ToList().AsReadOnly();
     }

@@ -4,17 +4,17 @@ public class InMemoryUserRepository : IUserRepository
 {
     private List<ToDoUser> _users = new List<ToDoUser>();
 
-    public ToDoUser? GetUser(Guid userId)
+    public async Task<ToDoUser?> GetUser(Guid userId)
     {
         return _users.FirstOrDefault(u => u.UserId == userId);
     }
 
-    public ToDoUser? GetUserByTelegramUserId(long telegramUserId)
+    public async Task<ToDoUser?> GetUserByTelegramUserId(long telegramUserId)
     {
         return _users.FirstOrDefault(u => u.TelegramUserId == telegramUserId);
     }
 
-    public void Add(ToDoUser user)
+    public async Task Add(ToDoUser user)
     {
         _users.Add(user);
     }

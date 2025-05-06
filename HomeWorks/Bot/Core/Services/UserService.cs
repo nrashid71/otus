@@ -2,17 +2,27 @@ namespace Bot;
 
 public class UserService : IUserService
 {
-    IUserRepository _userRepository = new InMemoryUserRepository();
-    public ToDoUser RegisterUser(long telegramUserId, string telegramUserName)
+    IUserRepository _userRepository;
+
+    public UserService(IUserRepository inMemoryUserRepository)
     {
-        var toDoUser = GetUser(telegramUserId);
+        _userRepository = inMemoryUserRepository;
+    }
+
+    public async Task<ToDoUser> RegisterUser(long telegramUserId, string telegramUserName)
+    {
+        var toDoUser = await GetUser(telegramUserId);
         if (toDoUser == null)
         {
             toDoUser = new ToDoUser(telegramUserId, telegramUserName);
-            _userRepository.Add(toDoUser);
+            await _userRepository.Add(toDoUser);
         }
         return toDoUser;
     }
 
-    public ToDoUser? GetUser(long telegramUserId) => _userRepository.GetUserByTelegramUserId(telegramUserId);
+    public async Task<ToDoUser?> GetUser(long telegramUserId)
+    {
+        var result = await _userRepository.GetUserByTelegramUserId(telegramUserId);
+        return result;
+    }
 }
