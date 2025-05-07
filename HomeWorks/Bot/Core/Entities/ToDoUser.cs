@@ -1,5 +1,3 @@
-using Otus.ToDoList.ConsoleBot.Types; 
-    
 namespace Bot;
 
 public class ToDoUser
@@ -8,14 +6,8 @@ public class ToDoUser
     {
         TelegramUserId = telegramUserId;
         TelegramUserName = telegramUserName;
+        UserId = Guid.NewGuid();
     }
-
-    public ToDoUser(User user)
-    {
-        TelegramUserId = user.Id;
-        TelegramUserName = user.Username;
-    }
-
     public Guid UserId { get; init; }
     
     public long TelegramUserId { get; init; }

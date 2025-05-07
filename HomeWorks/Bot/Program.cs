@@ -1,7 +1,4 @@
-﻿using Otus.ToDoList.ConsoleBot;
-using Otus.ToDoList.ConsoleBot.Types;
-using System.Diagnostics;
-using System.Threading.Tasks;
+﻿using Telegram.Bot;
 
 namespace Bot
 {
@@ -15,16 +12,42 @@ namespace Bot
             IUserRepository inMemoryUserRepository = new InMemoryUserRepository();
             IUserService userService = new UserService(inMemoryUserRepository);
 
-            var handler = new UpdateHandler(toDoService, userService);
+            UpdateHandler handler = new UpdateHandler(toDoService, userService);
+            
+            string token = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");  // в linux для обычного пользователя
+            
+            if (string.IsNullOrEmpty(token))
+            {
+                Console.WriteLine("Bot token not found. Please set the TELEGRAM_BOT_TOKEN environment variable.");
+                return;
+            }
+
             try
             {
                 handler.UpdateStarted += handler.OnHandleUpdateStarted;
                 handler.UpdateCompleted += handler.OnHandleUpdateCompleted;
 
-                var botClient = new ConsoleBotClient();
+                var botClient = new TelegramBotClient(token);
 
                 var ct = new CancellationTokenSource();
-                botClient.StartReceiving(handler, ct.Token);
+                botClient.StartReceiving(handler, cancellationToken:ct.Token);
+                while (true)
+                {
+                    Console.WriteLine("Нажмите клавишу A для выхода");
+                    var s = Console.ReadLine();
+                    if (s?.ToUpper() == "A")
+                    {
+                        ct.Cancel();
+                        Console.WriteLine("Бот остановлен");
+                        break;
+                    }
+                    else
+                    {
+                        var me = botClient.GetMe();
+                        Console.WriteLine($"Бот запущен - {me.Result.Id}, {me.Result.FirstName}"); 
+                    }
+                }              
+                
             }
             catch (Exception ex)
             {

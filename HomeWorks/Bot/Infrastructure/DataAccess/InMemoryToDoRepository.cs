@@ -19,7 +19,7 @@ public class InMemoryToDoRepository : IToDoRepository
 
     public async Task Add(ToDoItem item)
     {
-        if (GetByGuid(item.Id) == null)
+        if ((await GetByGuid(item.Id)) == null)
         {
             _toDoItems.Add(item);
         }
