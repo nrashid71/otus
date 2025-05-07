@@ -1,6 +1,9 @@
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
+using System.Text.RegularExpressions;
 
 namespace Bot;
 
@@ -68,30 +71,54 @@ public class UpdateHandler : IUpdateHandler
     {
         string botCommand;
         string InfoMessage = "Вам доступны команды: start, help, info, addtask, showtasks, removetask, completetask, showalltasks, report, find, exit. При вводе команды указываейте вначале символ / (слеш).";
-//        var toDoUser = UserService.GetUser(update.Message.From.Id);
         try
         {
-            // await botClient.SendMessage(update.Message.Chat, "Введите команду:", ct);
-            // botCommand = Console.ReadLine() ?? "";
             botCommand = update.Message.Text;
+            var toDoUser = (await UserService.GetUser(update.Message.From.Id));
+            ReplyKeyboardMarkup replyMarkup;
+            if (toDoUser == null)
+            {
+                if (botCommand != "/start")
+                {
+                    replyMarkup = new ReplyKeyboardMarkup(
+                        new[] { new KeyboardButton[] { "/start" } });
+                    await botClient.SendMessage(
+                        update.Message.Chat,
+                        "Зарегистрируйтесь, выполнив команду start",
+                        cancellationToken: ct,
+                        replyMarkup: replyMarkup);
+                }
+                else
+                {
+                    replyMarkup = new ReplyKeyboardMarkup();
+                }
+            }
+            else
+            {
+                replyMarkup = new ReplyKeyboardMarkup(new[]
+                {
+                    new KeyboardButton[] { "/showalltasks","/showtasks","/report" }
+                });
+            }
+            replyMarkup.ResizeKeyboard = true;
             UpdateStarted.Invoke(botCommand);
             switch (botCommand)
             {
                 case "/help":
-                    await HelpAsync(botClient, update, ct);
+                    await HelpAsync(botClient, update, ct, replyMarkup);
                     break;
                 case "/info":
-                    await InfoAsync(botClient, update, ct);
+                    await InfoAsync(botClient, update, ct, replyMarkup);
                     break;
                 case "/start":
-                    Start(botClient, update);
+                    await Start(botClient, update, ct);
                     break;
                 default:
                     var idx = botCommand.IndexOf(" ");
                     if (_registredUserCommands.Contains(botCommand.Substring(0, idx == -1 ? botCommand.Length : idx)
                             .Trim()))
                     {
-                        if ((await UserService.GetUser(update.Message.From.Id)) != null)
+                        if (toDoUser != null)
                         {
                             switch (botCommand)
                             {
@@ -99,33 +126,33 @@ public class UpdateHandler : IUpdateHandler
 //                                    Environment.Exit(0);
                                     break;
                                 case string bc when bc.StartsWith("/addtask "):
-                                    await AddTaskAsync(botClient, update, botCommand.Substring("/addtask ".Length), ct);
+                                    await AddTaskAsync(botClient, update, botCommand.Substring("/addtask ".Length), ct, replyMarkup);
                                     break;
                                 case "/showtasks":
-                                    await ShowTasksAsync(botClient, update, ct);
+                                    await ShowTasksAsync(botClient, update, ct, replyMarkup);
                                     break;
                                 case string bc when bc.StartsWith("/removetask "):
                                     await RemoveTaskAsync(botClient, update,
-                                        botCommand.Substring("/removetask ".Length), ct);
+                                        botCommand.Substring("/removetask ".Length), ct, replyMarkup);
                                     break;
                                 case string bc when bc.StartsWith("/completetask "):
                                     CompleteTask(botCommand.Substring("/completetask ".Length));
                                     break;
                                 case "/showalltasks":
-                                    await ShowAllTasksAsync(botClient, update, ct);
+                                    await ShowAllTasksAsync(botClient, update, ct, replyMarkup);
                                     break;
                                 case "/report":
-                                    await ReportAsync(botClient, update, ct);
+                                    await ReportAsync(botClient, update, ct, replyMarkup);
                                     break;
                                 case string bc when bc.StartsWith("/find "):
-                                    await FindAsync(botClient, update, botCommand.Substring("/find ".Length), ct);
+                                    await FindAsync(botClient, update, botCommand.Substring("/find ".Length), ct, replyMarkup);
                                     break;
                             }
                         }
                     }
                     else
                     {
-                        await NonCommandAsync(botClient, update, botCommand, InfoMessage, ct);
+                        await NonCommandAsync(botClient, update, botCommand, InfoMessage, ct, replyMarkup);
                     }
 
                     break;
@@ -167,10 +194,24 @@ public class UpdateHandler : IUpdateHandler
     /// <param name="botClient"></param>
     /// <param name="update"></param>
     /// <returns>Имя пользователя</returns>
-    void Start(ITelegramBotClient botClient, Update update)
+     async Task Start(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
     {
         var from = update?.Message?.From;
-        var toDoUser = UserService.RegisterUser(from?.Id ?? 0, from?.Username);
+        var toDoUser = await UserService.RegisterUser(from?.Id ?? 0, from?.Username);
+        if (toDoUser != null)
+        {
+            ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(new[]
+            {
+                new KeyboardButton[] { "/showalltasks", "/showtasks", "/report" }
+            }) {
+                ResizeKeyboard = true,
+            };
+            await botClient.SendMessage(
+                update.Message.Chat,
+                "Для отображения информации по задачам можно воспользоваться кнопками",
+                cancellationToken: cancellationToken,
+                replyMarkup: replyMarkup);
+        }
     }
     
     /// <summary>
@@ -178,7 +219,7 @@ public class UpdateHandler : IUpdateHandler
     /// </summary>
     /// <param name="botClient"></param>
     /// <param name="update"></param>
-    async Task HelpAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
+    async Task HelpAsync(ITelegramBotClient botClient, Update update, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
         string helpMessage = @"Бот предназначен для управления списком задач (to do list)
 Список допустимых команд:
@@ -193,7 +234,7 @@ public class UpdateHandler : IUpdateHandler
  /report        - статистика по задачам
  /find          - поиск задачи
  /exit          - завершение работы с ботом";
-        await botClient.SendMessage(update.Message.Chat, await ReplayAsync(update, helpMessage), cancellationToken:ct);
+        await botClient.SendMessage(update.Message.Chat, await ReplayAsync(update, helpMessage), cancellationToken:ct, replyMarkup: replyMarkup);
     }
     
     /// <summary>
@@ -203,11 +244,11 @@ public class UpdateHandler : IUpdateHandler
     /// <param name="update"></param>
     /// <param name="str">Введенная строка.</param>
     /// <param name="infoMessage">Сообщение для пользователя.</param>
-    async Task NonCommandAsync(ITelegramBotClient botClient, Update update, string str, string infoMessage, CancellationToken ct)
+    async Task NonCommandAsync(ITelegramBotClient botClient, Update update, string str, string infoMessage, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
         if (!string.IsNullOrEmpty(str))
         {
-            await botClient.SendMessage(update.Message.Chat,await ReplayAsync(update,$"Команда {str} не предусмотрена к обработке.\n" + infoMessage), cancellationToken:ct);
+            await botClient.SendMessage(update.Message.Chat,await ReplayAsync(update,$"Команда {str} не предусмотрена к обработке.\n" + infoMessage), cancellationToken:ct, replyMarkup: replyMarkup);
         }
     }
 
@@ -216,9 +257,9 @@ public class UpdateHandler : IUpdateHandler
     /// </summary>
     /// <param name="botClient"></param>
     /// <param name="update"></param>
-    async Task InfoAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
+    async Task InfoAsync(ITelegramBotClient botClient, Update update, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
-        await botClient.SendMessage(update.Message.Chat,await ReplayAsync(update,"Версия программы 0.1.0-alpha. Дата создания 22.02.2025."), cancellationToken:ct);
+        await botClient.SendMessage(update.Message.Chat,await ReplayAsync(update,"Версия программы 0.1.0-alpha. Дата создания 22.02.2025."), cancellationToken:ct, replyMarkup: replyMarkup);
     }
     
     /// <summary>
@@ -242,7 +283,7 @@ public class UpdateHandler : IUpdateHandler
     /// </summary>
     /// <param name="botClient"></param>
     /// <param name="update"></param>
-    async Task AddTaskAsync(ITelegramBotClient botClient, Update update, string description, CancellationToken ct)
+    async Task AddTaskAsync(ITelegramBotClient botClient, Update update, string description, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
         var toDoUser = await UserService.GetUser(update.Message.From.Id);
         var userId = toDoUser?.UserId ?? Guid.Empty;
@@ -268,7 +309,7 @@ public class UpdateHandler : IUpdateHandler
             
             ToDoService.Add(toDoUser, description);
             
-            await botClient.SendMessage(update.Message.Chat,"Задача добавлена.", cancellationToken:ct);
+            await botClient.SendMessage(update.Message.Chat,"Задача добавлена.", cancellationToken:ct, replyMarkup: replyMarkup);
         }
     }
 
@@ -277,7 +318,7 @@ public class UpdateHandler : IUpdateHandler
     /// </summary>
     /// <param name="botClient"></param>
     /// <param name="update"></param>
-    async Task ShowTasksAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
+    async Task ShowTasksAsync(ITelegramBotClient botClient, Update update, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
         var toDoUser = await UserService.GetUser(update.Message.From.Id);
         var userId = toDoUser?.UserId ?? Guid.Empty;
@@ -288,13 +329,17 @@ public class UpdateHandler : IUpdateHandler
         
         if ((await ToDoService.GetAllByUserId(userId)).Count  == 0)
         {
-            await botClient.SendMessage(update.Message.Chat,"Список задач пуст.", cancellationToken:ct);
+            await botClient.SendMessage(update.Message.Chat,"Список задач пуст.", cancellationToken:ct, replyMarkup: replyMarkup);
         }
         else
         {
             foreach (var task in (await ToDoService.GetActiveByUserId(userId)))
             {
-                await botClient.SendMessage(update.Message.Chat,$"{task.Name} - {task.CreatedAt} - {task.Id}", cancellationToken:ct);
+                await botClient.SendMessage(update.Message.Chat,
+                                        Regex.Replace($"{task.Name} - {task.CreatedAt} - `{task.Id}`","[-\\.]","\\$0"),
+                                            cancellationToken:ct,
+                                            parseMode:ParseMode.MarkdownV2,
+                                            replyMarkup: replyMarkup);
             }
         }
     }
@@ -304,7 +349,7 @@ public class UpdateHandler : IUpdateHandler
     /// </summary>
     /// <param name="botClient"></param>
     /// <param name="update"></param>
-    async Task RemoveTaskAsync(ITelegramBotClient botClient, Update update, string stringGuid, CancellationToken ct)
+    async Task RemoveTaskAsync(ITelegramBotClient botClient, Update update, string stringGuid, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
         var toDoUser = await UserService.GetUser(update.Message.From.Id);
         var userId = toDoUser?.UserId ?? Guid.Empty;
@@ -314,35 +359,20 @@ public class UpdateHandler : IUpdateHandler
         }
         
         if ((await ToDoService.GetAllByUserId(userId)).Count  == 0) {
-            await botClient.SendMessage(update.Message.Chat,"Список задач пуст, удалять нечего.", cancellationToken:ct);
+            await botClient.SendMessage(update.Message.Chat,"Список задач пуст, удалять нечего.", cancellationToken:ct, replyMarkup: replyMarkup);
             return;
         }
 
         if (Guid.TryParse(stringGuid, out var guid))
         {
             ToDoService.Delete(guid);
-            await botClient.SendMessage(update.Message.Chat,$"Задача с id \"{stringGuid}\" удалена.", cancellationToken:ct);
+            await botClient.SendMessage(update.Message.Chat,$"Задача с id \"{stringGuid}\" удалена.", cancellationToken:ct, replyMarkup: replyMarkup);
         }
         else
         {
-            await botClient.SendMessage(update.Message.Chat, $"Задачи с id \"{stringGuid}\" нет.", cancellationToken:ct);
+            await botClient.SendMessage(update.Message.Chat, $"Задачи с id \"{stringGuid}\" нет.", cancellationToken:ct, replyMarkup: replyMarkup);
         }
     }
-
-    /// <summary>
-    /// Проверка списка задач на количество и длину задания
-    /// </summary>
-    // private async Task CheckTasksAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
-    // {
-    //     if (_taskCountLimit == -1)
-    //     {
-    //         _taskCountLimit = await GetTasksLimitAsync(botClient, update, ct);
-    //     }
-    //     if (_taskLengthLimit == -1)
-    //     {
-    //         _taskLengthLimit = await GetTaskLengthLimitAsync(botClient, update, ct);
-    //     }
-    // }
 
     /// <summary>
     /// Выводит текст с запросом на ввод допустимого количества задач. Если введенное значение не входит в указанный диапазон значений, то генерируется исключение
@@ -351,9 +381,9 @@ public class UpdateHandler : IUpdateHandler
     /// <param name="update"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentException"></exception>
-    async Task<int> GetTasksLimitAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
+    async Task<int> GetTasksLimitAsync(ITelegramBotClient botClient, Update update, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
-        botClient.SendMessage(update.Message.Chat, $"Введите максимально допустимое количество задач ({MinCountLimit}-{MaxCountLimit}): ", cancellationToken:ct);
+        botClient.SendMessage(update.Message.Chat, $"Введите максимально допустимое количество задач ({MinCountLimit}-{MaxCountLimit}): ", cancellationToken:ct, replyMarkup: replyMarkup);
         string tasksLimitStr = Console.ReadLine() ?? "";
         return ParseAndValidateInt(tasksLimitStr, MinCountLimit, MaxCountLimit);
     }
@@ -364,9 +394,9 @@ public class UpdateHandler : IUpdateHandler
     /// <param name="update"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentException"></exception>
-    async Task<int> GetTaskLengthLimitAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
+    async Task<int> GetTaskLengthLimitAsync(ITelegramBotClient botClient, Update update, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
-        botClient.SendMessage(update.Message.Chat, $"Введите максимально допустимую длину задачи ({MinLengthLimit}-{MaxLengthLimit} символов): ", cancellationToken:ct);
+        botClient.SendMessage(update.Message.Chat, $"Введите максимально допустимую длину задачи ({MinLengthLimit}-{MaxLengthLimit} символов): ", cancellationToken:ct, replyMarkup: replyMarkup);
         string taskLengthLimitStr = Console.ReadLine() ?? "";
         return ParseAndValidateInt(taskLengthLimitStr, MinLengthLimit, MaxLengthLimit);
     }
@@ -426,7 +456,7 @@ public class UpdateHandler : IUpdateHandler
     /// </summary>
     /// <param name="botClient"></param>
     /// <param name="update"></param>
-    async Task ShowAllTasksAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
+    async Task ShowAllTasksAsync(ITelegramBotClient botClient, Update update, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
         var toDoUser = await UserService.GetUser(update.Message.From.Id);
         var userId = toDoUser?.UserId ?? Guid.Empty;
@@ -436,13 +466,13 @@ public class UpdateHandler : IUpdateHandler
         }
         if ((await ToDoService.GetAllByUserId(userId)).Count  == 0)
         {
-            await botClient.SendMessage(update.Message.Chat,await ReplayAsync(update,"Список задач пуст."), cancellationToken:ct);
+            await botClient.SendMessage(update.Message.Chat,await ReplayAsync(update,"Список задач пуст."), cancellationToken:ct, replyMarkup: replyMarkup);
         }
         else
         {
             foreach (var task in await ToDoService.GetAllByUserId(userId))
             {
-                await botClient.SendMessage(update.Message.Chat,$"({Enum.GetName(task.State)}) {task.Name} - {task.CreatedAt} - {task.Id}", cancellationToken:ct);
+                await botClient.SendMessage(update.Message.Chat,$"({Enum.GetName(task.State)}) {task.Name} - {task.CreatedAt} - {task.Id}", cancellationToken:ct, replyMarkup: replyMarkup);
             }
         }
     }
@@ -451,7 +481,7 @@ public class UpdateHandler : IUpdateHandler
     /// </summary>
     /// <param name="botClient"></param>
     /// <param name="update"></param>
-    async Task ReportAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
+    async Task ReportAsync(ITelegramBotClient botClient, Update update, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
         var ( total, completed, active, generatedAt)
                 = (new ToDoReportService(ToDoService)).GetUserStats((await UserService.GetUser(update.Message.From.Id)).UserId);
@@ -459,7 +489,7 @@ public class UpdateHandler : IUpdateHandler
         await botClient.SendMessage(update.Message.Chat,$"Статистика по задачам на {generatedAt}." +
                                                   $" Всего: {total};" +
                                                   $" Завершенных: {completed}" +
-                                                  $" Активных: {active};", cancellationToken:ct);
+                                                  $" Активных: {active};", cancellationToken:ct, replyMarkup: replyMarkup);
     }
 
     /// <summary>
@@ -467,11 +497,11 @@ public class UpdateHandler : IUpdateHandler
     /// </summary>
     /// <param name="botClient"></param>
     /// <param name="update"></param>
-    async Task FindAsync(ITelegramBotClient botClient, Update update, string namePrefix, CancellationToken ct)
+    async Task FindAsync(ITelegramBotClient botClient, Update update, string namePrefix, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
         foreach (var task in await ToDoService.Find((await UserService.GetUser(update.Message.From.Id)), namePrefix))
         {
-            await botClient.SendMessage(update.Message.Chat,$"{task.Name} - {task.CreatedAt} - {task.Id}", cancellationToken:ct);
+            await botClient.SendMessage(update.Message.Chat,$"{task.Name} - {task.CreatedAt} - {task.Id}", cancellationToken:ct, replyMarkup: replyMarkup);
         }
     }
 }
