@@ -1,5 +1,3 @@
-using Otus.ToDoList.ConsoleBot.Types;
-
 namespace Bot;
 
 public interface IUserRepository
