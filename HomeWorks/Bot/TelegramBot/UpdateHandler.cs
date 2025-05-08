@@ -351,7 +351,7 @@ public class UpdateHandler : IUpdateHandler
             foreach (var task in (await ToDoService.GetActiveByUserId(userId)))
             {
                 await botClient.SendMessage(update.Message.Chat,
-                                        Regex.Replace($"{task.Name} - {task.CreatedAt} - `{task.Id}`","[-\\.]","\\$0"),
+                                        Regex.Replace($"{task.Name} - {task.CreatedAt} - `{task.Id}`","[-\\.\\(\\)\\[\\]\\+\\!\\=_\\|\\*\\~\\>\\#\\{\\}]","\\$0"),
                                             cancellationToken:ct,
                                             parseMode:ParseMode.MarkdownV2,
                                             replyMarkup: replyMarkup);
@@ -488,7 +488,7 @@ public class UpdateHandler : IUpdateHandler
             foreach (var task in await ToDoService.GetAllByUserId(userId))
             {
                 await botClient.SendMessage(update.Message.Chat,
-                    Regex.Replace($"({Enum.GetName(task.State)}) {task.Name} - {task.CreatedAt} - `{task.Id}`","[-\\.]","\\$0"),
+                    Regex.Replace($"({Enum.GetName(task.State)}) {task.Name} - {task.CreatedAt} - `{task.Id}`","[-\\.\\(\\)\\[\\]\\+\\!\\=_\\|\\*\\~\\>\\#\\{\\}]","\\$0"),
                     cancellationToken:ct,
                     parseMode:ParseMode.MarkdownV2,
                     replyMarkup: replyMarkup);                
