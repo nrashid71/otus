@@ -73,6 +73,21 @@ public class UpdateHandler : IUpdateHandler
         string InfoMessage = "Вам доступны команды: start, help, info, addtask, showtasks, removetask, completetask, showalltasks, report, find, exit. При вводе команды указываейте вначале символ / (слеш).";
         try
         {
+            var commands = new List<BotCommand>
+            {
+                new BotCommand {Command = "start", Description = "Старт бота"},
+                new BotCommand {Command = "help", Description = "Подсказка по командам бота"},
+                new BotCommand {Command = "info", Description = "Информация по версии и дате версии бота"},
+                new BotCommand {Command = "addtask", Description = "Добавление новой задачи"},
+                new BotCommand {Command = "showtasks", Description = "Отображение списка задач"},
+                new BotCommand {Command = "removetask", Description = "Удаление задачи"},
+                new BotCommand {Command = "completetask", Description = "Завершение задачи"},
+                new BotCommand {Command = "showalltasks", Description = "Отображение списка задач со статусами"},
+                new BotCommand {Command = "report", Description = "Статистика по задачам"},
+                new BotCommand {Command = "find", Description = "Поиск задачи"},
+                new BotCommand {Command = "exit", Description = "Завершение работы с ботом"}
+            };
+            await botClient.SetMyCommands(commands);
             botCommand = update.Message.Text;
             var toDoUser = (await UserService.GetUser(update.Message.From.Id));
             ReplyKeyboardMarkup replyMarkup;
@@ -213,7 +228,7 @@ public class UpdateHandler : IUpdateHandler
                 replyMarkup: replyMarkup);
         }
     }
-    
+   
     /// <summary>
     /// Вывод информации о том, что делает бот - команда /help.
     /// </summary>
@@ -472,7 +487,11 @@ public class UpdateHandler : IUpdateHandler
         {
             foreach (var task in await ToDoService.GetAllByUserId(userId))
             {
-                await botClient.SendMessage(update.Message.Chat,$"({Enum.GetName(task.State)}) {task.Name} - {task.CreatedAt} - {task.Id}", cancellationToken:ct, replyMarkup: replyMarkup);
+                await botClient.SendMessage(update.Message.Chat,
+                    Regex.Replace($"({Enum.GetName(task.State)}) {task.Name} - {task.CreatedAt} - `{task.Id}`","[-\\.]","\\$0"),
+                    cancellationToken:ct,
+                    parseMode:ParseMode.MarkdownV2,
+                    replyMarkup: replyMarkup);                
             }
         }
     }
