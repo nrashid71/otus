@@ -6,8 +6,9 @@ namespace Bot
     {
         static void Main(string[] args)
         {
-            IToDoRepository inMemoryToDoRepository = new InMemoryToDoRepository();
-            IToDoService toDoService = new ToDoService(inMemoryToDoRepository);
+//            IToDoRepository inMemoryToDoRepository = new InMemoryToDoRepository();
+            IToDoRepository toDoRepository = new FileToDoRepository(Path.Combine(Directory.GetCurrentDirectory(), "FileToDoRepository"));
+            IToDoService toDoService = new ToDoService(toDoRepository);
 
             IUserRepository inMemoryUserRepository = new InMemoryUserRepository();
             IUserService userService = new UserService(inMemoryUserRepository);
