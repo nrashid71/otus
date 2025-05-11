@@ -370,7 +370,7 @@ public class UpdateHandler : IUpdateHandler
         var userId = toDoUser?.UserId ?? Guid.Empty;
         if (userId == Guid.Empty)
         {
-            throw new Exception("Нельзя удаоить задачу, так как пользователь не зарегистрирован в боте.");
+            throw new Exception("Нельзя удалить задачу, так как пользователь не зарегистрирован в боте.");
         }
         
         if ((await ToDoService.GetAllByUserId(userId)).Count  == 0) {

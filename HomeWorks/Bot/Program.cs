@@ -10,8 +10,9 @@ namespace Bot
             IToDoRepository toDoRepository = new FileToDoRepository(Path.Combine(Directory.GetCurrentDirectory(), "FileToDoRepository"));
             IToDoService toDoService = new ToDoService(toDoRepository);
 
-            IUserRepository inMemoryUserRepository = new InMemoryUserRepository();
-            IUserService userService = new UserService(inMemoryUserRepository);
+//            IUserRepository inMemoryUserRepository = new InMemoryUserRepository();
+            IUserRepository userRepository = new FileUserRepository(Path.Combine(Directory.GetCurrentDirectory(), "FileUserRepository"));
+            IUserService userService = new UserService(userRepository);
 
             UpdateHandler handler = new UpdateHandler(toDoService, userService);
             
