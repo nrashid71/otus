@@ -4,11 +4,6 @@ public class InMemoryToDoRepository : IToDoRepository
 {
     private List<ToDoItem> _toDoItems = new List<ToDoItem>();
     
-    /// <summary>
-    /// Это публичный метод GetByGuid не заявлен в интерфейсе, но без него никак не реализуешь IToDoService.MarkCompleted
-    /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
     public async Task<ToDoItem?> GetByGuid(Guid id) => _toDoItems.FirstOrDefault(i => i.Id == id);
 
     public async Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId) =>
@@ -52,7 +47,7 @@ public class InMemoryToDoRepository : IToDoRepository
         }
     }
 
-    public async Task<bool> ExistsByName(Guid userId, string name) => _toDoItems.Any(i => i.Name == name);
+    public async Task<bool> ExistsByName(Guid userId, string name) => _toDoItems.Any(i => i.Name == name && i.ToDoUser.UserId == userId);
 
     public async Task<int> CountActive(Guid userId) => _toDoItems.Count(i => i.State == ToDoItemState.Active);
     public async Task<IReadOnlyList<ToDoItem>> Find(Guid userId, Func<ToDoItem, bool> predicate)
