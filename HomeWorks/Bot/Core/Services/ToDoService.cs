@@ -1,7 +1,3 @@
-using System.Collections.Immutable;
-using Otus.ToDoList.ConsoleBot;
-using Otus.ToDoList.ConsoleBot.Types;
-
 namespace Bot;
 public class ToDoService : IToDoService
 {
