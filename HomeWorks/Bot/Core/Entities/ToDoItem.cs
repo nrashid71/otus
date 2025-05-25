@@ -24,7 +24,6 @@ public class ToDoItem
 
     public ToDoItem(string name, ToDoUser toDoUser)
     {
-        Console.WriteLine("ToDoItem: " + toDoUser.UserId);
         Id = Guid.NewGuid();
         ToDoUser = toDoUser;
         Name = name;
