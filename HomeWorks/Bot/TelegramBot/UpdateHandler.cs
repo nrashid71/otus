@@ -15,15 +15,15 @@ public class UpdateHandler : IUpdateHandler
     private IToDoService ToDoService { get; }
     
     private IUserService UserService { get; }
+    
+    private IScenario[] Scenarios { get; }
+
+    private IScenarioContextRepository ContextRepository { get; }
 
     /// <summary>
     /// Максимальное количество задач, указанное пользователем. Значение -1 указывает на то, что атрибут не проинициализирован пользователем через запрос.
     /// </summary>
     int _taskCountLimit = 100;
-    /// <summary>
-    /// Максимальная длина задачи, указанная пользователем. Значение -1 указывает на то, что атрибут не проинициализирован пользователем через запрос.
-    /// </summary>
-    int _taskLengthLimit = 1000;
 
     /// <summary>
     /// Левая граница диапазона значений для максимально количества задач.
@@ -45,12 +45,42 @@ public class UpdateHandler : IUpdateHandler
     /// </summary>
     const int MaxLengthLimit = 1000;
 
-    public UpdateHandler(IToDoService toDoService, IUserService userService)
+    public UpdateHandler(IToDoService toDoService, IUserService userService, IEnumerable<IScenario> scenarios, IScenarioContextRepository contextRepository)
     {
         ToDoService = toDoService;
         UserService = userService;
+        ContextRepository = contextRepository;
+        Scenarios = (IScenario[]) scenarios;
     }
-    
+
+    IScenario GetScenario(ScenarioType scenario)
+    {
+        var result = Scenarios.FirstOrDefault(s => s.CanHandle(scenario));//(s => s.CanHandle(scenario));
+
+        if (result == null)
+        {
+            throw new Exception($"Scenario {scenario} not found");
+        }
+        
+        return result;
+    }
+
+    private async Task ProcessScenario(ITelegramBotClient botClient, ScenarioContext context, Update update, CancellationToken ct)
+    {
+        IScenario scenario = GetScenario(context.CurrentScenario);
+
+        var scenarioResult = await scenario.HandleMessageAsync(botClient, context, update, ct);
+
+        if (scenarioResult == ScenarioResult.Completed)
+        {
+            await ContextRepository.ResetContext(update?.Message?.From?.Id ?? 0, ct);
+        }
+        else
+        {
+            await ContextRepository.SetContext(update?.Message?.From?.Id ?? 0, context, ct);
+        }
+    }
+
     public event MessageEventHandler? UpdateStarted;
     public void OnHandleUpdateStarted(string message)
     {
@@ -87,6 +117,12 @@ public class UpdateHandler : IUpdateHandler
                 new BotCommand {Command = "find", Description = "Поиск задачи"},
                 new BotCommand {Command = "exit", Description = "Завершение работы с ботом"}
             };
+            var context = await ContextRepository.GetContext(update?.Message?.From?.Id ?? 0, ct);
+            if (context != null)
+            {
+                ProcessScenario(botClient, context, update, ct);
+                return;
+            }
             await botClient.SetMyCommands(commands);
             botCommand = update.Message.Text;
             var toDoUser = (await UserService.GetUser(update.Message.From.Id));
@@ -140,8 +176,8 @@ public class UpdateHandler : IUpdateHandler
                                 case "/exit":
 //                                    Environment.Exit(0);
                                     break;
-                                case string bc when bc.StartsWith("/addtask "):
-                                    await AddTaskAsync(botClient, update, botCommand.Substring("/addtask ".Length), ct, replyMarkup);
+                                case string bc when bc.StartsWith("/addtask"):
+                                    await AddTaskAsync(botClient, update, ct, replyMarkup);
                                     break;
                                 case "/showtasks":
                                     await ShowTasksAsync(botClient, update, ct, replyMarkup);
@@ -298,34 +334,23 @@ public class UpdateHandler : IUpdateHandler
     /// </summary>
     /// <param name="botClient"></param>
     /// <param name="update"></param>
-    async Task AddTaskAsync(ITelegramBotClient botClient, Update update, string description, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
+    async Task AddTaskAsync(ITelegramBotClient botClient, Update update, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
         var toDoUser = await UserService.GetUser(update.Message.From.Id);
         var userId = toDoUser?.UserId ?? Guid.Empty;
         if (userId == Guid.Empty)
         {
-            throw new Exception("Задачу добавить нельза, так как пользователь не зарегистрирован в боте.");
+            throw new Exception("Задачу добавить нельзя, так как пользователь не зарегистрирован в боте.");
         }
         if ((await ToDoService.GetAllByUserId(userId)).Count >= _taskCountLimit)
         {
             throw new TaskCountLimitException((int)_taskCountLimit);
         }
-        if (!string.IsNullOrEmpty(description))
-        {
-            if (description.Length > _taskLengthLimit)
-            {
-                throw new TaskLengthLimitException(description.Length, _taskLengthLimit);
-            }
+        
+        ScenarioContext context = new ScenarioContext(ScenarioType.AddTask);
 
-            if ((await ToDoService.GetAllByUserId(userId)).Any(t => t.Name == description))
-            {
-                throw new DuplicateTaskException(description);
-            }
-            
-            ToDoService.Add(toDoUser, description);
-            
-            await botClient.SendMessage(update.Message.Chat,"Задача добавлена.", cancellationToken:ct, replyMarkup: replyMarkup);
-        }
+        await ProcessScenario(botClient, context, update, ct);
+        
     }
 
     /// <summary>

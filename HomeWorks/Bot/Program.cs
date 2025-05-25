@@ -14,7 +14,13 @@ namespace Bot
             IUserRepository userRepository = new FileUserRepository(Path.Combine(Directory.GetCurrentDirectory(), "FileUserRepository"));
             IUserService userService = new UserService(userRepository);
 
-            UpdateHandler handler = new UpdateHandler(toDoService, userService);
+            IScenarioContextRepository contextRepository = new InMemoryScenarioContextRepository();
+            IScenario[] scenarios = new IScenario[]
+            {
+                new AddTaskScenario(ScenarioType.AddTask, userService, toDoService)
+            };
+
+            UpdateHandler handler = new UpdateHandler(toDoService, userService, scenarios, contextRepository);
             
             string token = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");  // в linux для обычного пользователя
             
