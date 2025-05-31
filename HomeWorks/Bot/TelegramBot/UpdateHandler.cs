@@ -10,20 +10,20 @@ namespace Bot;
 public delegate void MessageEventHandler(string message);
 public class UpdateHandler : IUpdateHandler
 {
-    private List<string> _registredUserCommands = new List<string>() {"/addtask","/showtasks","/removetask","/completetask","/showalltasks","/exit","/start","/report","/find"};
+    private List<string> _registredUserCommands = new List<string>() {"/addtask","/showtasks","/removetask","/completetask","/showalltasks","/cancel","/exit","/start","/report","/find"};
 
     private IToDoService ToDoService { get; }
     
     private IUserService UserService { get; }
+    
+    private IScenario[] Scenarios { get; }
+
+    private IScenarioContextRepository ContextRepository { get; }
 
     /// <summary>
     /// Максимальное количество задач, указанное пользователем. Значение -1 указывает на то, что атрибут не проинициализирован пользователем через запрос.
     /// </summary>
     int _taskCountLimit = 100;
-    /// <summary>
-    /// Максимальная длина задачи, указанная пользователем. Значение -1 указывает на то, что атрибут не проинициализирован пользователем через запрос.
-    /// </summary>
-    int _taskLengthLimit = 1000;
 
     /// <summary>
     /// Левая граница диапазона значений для максимально количества задач.
@@ -45,12 +45,38 @@ public class UpdateHandler : IUpdateHandler
     /// </summary>
     const int MaxLengthLimit = 1000;
 
-    public UpdateHandler(IToDoService toDoService, IUserService userService)
+    public UpdateHandler(IToDoService toDoService, IUserService userService, IEnumerable<IScenario> scenarios, IScenarioContextRepository contextRepository)
     {
         ToDoService = toDoService;
         UserService = userService;
+        ContextRepository = contextRepository;
+        Scenarios = (IScenario[]) scenarios;
     }
-    
+
+    IScenario GetScenario(ScenarioType scenario)
+    {
+        var result = Scenarios.FirstOrDefault(s => s.CanHandle(scenario));//(s => s.CanHandle(scenario));
+
+        if (result == null)
+        {
+            throw new Exception($"Scenario {scenario} not found");
+        }
+        
+        return result;
+    }
+
+    private async Task ProcessScenario(ITelegramBotClient botClient, ScenarioContext context, Update update, CancellationToken ct)
+    {
+        IScenario scenario = GetScenario(context.CurrentScenario);
+
+        var scenarioResult = await scenario.HandleMessageAsync(botClient, context, update, ct);
+
+        if (scenarioResult == ScenarioResult.Completed)
+        {
+            await ContextRepository.ResetContext(update?.Message?.From?.Id ?? 0, ct);
+        }
+    }
+
     public event MessageEventHandler? UpdateStarted;
     public void OnHandleUpdateStarted(string message)
     {
@@ -70,7 +96,7 @@ public class UpdateHandler : IUpdateHandler
     public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
     {
         string botCommand;
-        string InfoMessage = "Вам доступны команды: start, help, info, addtask, showtasks, removetask, completetask, showalltasks, report, find, exit. При вводе команды указываейте вначале символ / (слеш).";
+        string InfoMessage = "Вам доступны команды: start, help, info, addtask, showtasks, removetask, completetask, showalltasks, cancel, report, find, exit. При вводе команды указываейте вначале символ / (слеш).";
         try
         {
             var commands = new List<BotCommand>
@@ -83,10 +109,17 @@ public class UpdateHandler : IUpdateHandler
                 new BotCommand {Command = "removetask", Description = "Удаление задачи"},
                 new BotCommand {Command = "completetask", Description = "Завершение задачи"},
                 new BotCommand {Command = "showalltasks", Description = "Отображение списка задач со статусами"},
+                new BotCommand {Command = "cancel", Description = "Отмена выполнения сценария"},
                 new BotCommand {Command = "report", Description = "Статистика по задачам"},
                 new BotCommand {Command = "find", Description = "Поиск задачи"},
                 new BotCommand {Command = "exit", Description = "Завершение работы с ботом"}
             };
+            var context = await ContextRepository.GetContext(update?.Message?.From?.Id ?? 0, ct);
+            if (context != null && !string.IsNullOrEmpty(context.CurrentStep) && update.Message.Text != "/cancel")
+            {
+                await ProcessScenario(botClient, context, update, ct);
+                return;
+            }
             await botClient.SetMyCommands(commands);
             botCommand = update.Message.Text;
             var toDoUser = (await UserService.GetUser(update.Message.From.Id));
@@ -112,7 +145,7 @@ public class UpdateHandler : IUpdateHandler
             {
                 replyMarkup = new ReplyKeyboardMarkup(new[]
                 {
-                    new KeyboardButton[] { "/showalltasks","/showtasks","/report" }
+                    new KeyboardButton[] {"/addtask","/showalltasks","/showtasks","/report" }
                 });
             }
             replyMarkup.ResizeKeyboard = true;
@@ -140,8 +173,8 @@ public class UpdateHandler : IUpdateHandler
                                 case "/exit":
 //                                    Environment.Exit(0);
                                     break;
-                                case string bc when bc.StartsWith("/addtask "):
-                                    await AddTaskAsync(botClient, update, botCommand.Substring("/addtask ".Length), ct, replyMarkup);
+                                case "/addtask":
+                                    await AddTaskAsync(botClient, update, ct, replyMarkup);
                                     break;
                                 case "/showtasks":
                                     await ShowTasksAsync(botClient, update, ct, replyMarkup);
@@ -158,6 +191,9 @@ public class UpdateHandler : IUpdateHandler
                                     break;
                                 case "/report":
                                     await ReportAsync(botClient, update, ct, replyMarkup);
+                                    break;
+                                case "/cancel":
+                                    await CancelAsync(botClient, update, ct);
                                     break;
                                 case string bc when bc.StartsWith("/find "):
                                     await FindAsync(botClient, update, botCommand.Substring("/find ".Length), ct, replyMarkup);
@@ -217,7 +253,7 @@ public class UpdateHandler : IUpdateHandler
         {
             ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(new[]
             {
-                new KeyboardButton[] { "/showalltasks", "/showtasks", "/report" }
+                new KeyboardButton[] { "/addtask","/showalltasks", "/showtasks", "/report" }
             }) {
                 ResizeKeyboard = true,
             };
@@ -246,6 +282,7 @@ public class UpdateHandler : IUpdateHandler
  /removetask    - удаление задачи
  /completetask  - завершение задачи
  /showalltasks  - отображение списка задач со статусами
+ /cancel        - отмена выполнения сценария
  /report        - статистика по задачам
  /find          - поиск задачи
  /exit          - завершение работы с ботом";
@@ -298,34 +335,25 @@ public class UpdateHandler : IUpdateHandler
     /// </summary>
     /// <param name="botClient"></param>
     /// <param name="update"></param>
-    async Task AddTaskAsync(ITelegramBotClient botClient, Update update, string description, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
+    async Task AddTaskAsync(ITelegramBotClient botClient, Update update, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
         var toDoUser = await UserService.GetUser(update.Message.From.Id);
         var userId = toDoUser?.UserId ?? Guid.Empty;
         if (userId == Guid.Empty)
         {
-            throw new Exception("Задачу добавить нельза, так как пользователь не зарегистрирован в боте.");
+            throw new Exception("Задачу добавить нельзя, так как пользователь не зарегистрирован в боте.");
         }
         if ((await ToDoService.GetAllByUserId(userId)).Count >= _taskCountLimit)
         {
             throw new TaskCountLimitException((int)_taskCountLimit);
         }
-        if (!string.IsNullOrEmpty(description))
-        {
-            if (description.Length > _taskLengthLimit)
-            {
-                throw new TaskLengthLimitException(description.Length, _taskLengthLimit);
-            }
+        
+        ScenarioContext context = new ScenarioContext(ScenarioType.AddTask);
 
-            if ((await ToDoService.GetAllByUserId(userId)).Any(t => t.Name == description))
-            {
-                throw new DuplicateTaskException(description);
-            }
-            
-            ToDoService.Add(toDoUser, description);
-            
-            await botClient.SendMessage(update.Message.Chat,"Задача добавлена.", cancellationToken:ct, replyMarkup: replyMarkup);
-        }
+        await ContextRepository.SetContext(update?.Message?.From?.Id ?? 0, context, ct);
+
+        await ProcessScenario(botClient, context, update, ct);
+        
     }
 
     /// <summary>
@@ -511,6 +539,33 @@ public class UpdateHandler : IUpdateHandler
                                                   $" Активных: {active};", cancellationToken:ct, replyMarkup: replyMarkup);
     }
 
+    /// <summary>
+    /// Отмена выполнения сценария
+    /// </summary>
+    /// <param name="botClient"></param>
+    /// <param name="update"></param>
+    async Task CancelAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
+    {
+        var context = await ContextRepository.GetContext(update?.Message?.From?.Id ?? 0, ct);
+        
+        if (context != null && !string.IsNullOrEmpty(context.CurrentStep))
+        {
+            await ContextRepository.ResetContext(update?.Message?.From?.Id ?? 0, ct);
+            ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(new[]
+            {
+                new KeyboardButton[] { "/addtask","/showalltasks", "/showtasks", "/report" }
+            }) 
+            {
+                ResizeKeyboard = true,
+            };
+            await botClient.SendMessage(
+                update.Message.Chat,
+                "Отмена выполнения сценария",
+                cancellationToken: ct,
+                replyMarkup: replyMarkup);
+        }
+    }
+    
     /// <summary>
     /// Поиск задач
     /// </summary>

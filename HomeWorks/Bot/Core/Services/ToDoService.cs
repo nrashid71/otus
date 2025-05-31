@@ -20,9 +20,9 @@ public class ToDoService : IToDoService
         return result;
     }
 
-    public async Task<ToDoItem> Add(ToDoUser user, string name)
+    public async Task<ToDoItem> Add(ToDoUser user, string name, DateTime deadline)
     {
-        ToDoItem toDoItem = new ToDoItem(name, user);
+        ToDoItem toDoItem = new ToDoItem(name, user, deadline);
         
         await ToDoRepository.Add(toDoItem);
         
