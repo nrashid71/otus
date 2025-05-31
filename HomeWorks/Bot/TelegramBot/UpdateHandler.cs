@@ -10,7 +10,7 @@ namespace Bot;
 public delegate void MessageEventHandler(string message);
 public class UpdateHandler : IUpdateHandler
 {
-    private List<string> _registredUserCommands = new List<string>() {"/addtask","/showtasks","/removetask","/completetask","/showalltasks","/exit","/start","/report","/find"};
+    private List<string> _registredUserCommands = new List<string>() {"/addtask","/showtasks","/removetask","/completetask","/showalltasks","/cancel","/exit","/start","/report","/find"};
 
     private IToDoService ToDoService { get; }
     
@@ -100,7 +100,7 @@ public class UpdateHandler : IUpdateHandler
     public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
     {
         string botCommand;
-        string InfoMessage = "Вам доступны команды: start, help, info, addtask, showtasks, removetask, completetask, showalltasks, report, find, exit. При вводе команды указываейте вначале символ / (слеш).";
+        string InfoMessage = "Вам доступны команды: start, help, info, addtask, showtasks, removetask, completetask, showalltasks, cancel, report, find, exit. При вводе команды указываейте вначале символ / (слеш).";
         try
         {
             var commands = new List<BotCommand>
@@ -113,14 +113,15 @@ public class UpdateHandler : IUpdateHandler
                 new BotCommand {Command = "removetask", Description = "Удаление задачи"},
                 new BotCommand {Command = "completetask", Description = "Завершение задачи"},
                 new BotCommand {Command = "showalltasks", Description = "Отображение списка задач со статусами"},
+                new BotCommand {Command = "cancel", Description = "Отмена выполнения сценария"},
                 new BotCommand {Command = "report", Description = "Статистика по задачам"},
                 new BotCommand {Command = "find", Description = "Поиск задачи"},
                 new BotCommand {Command = "exit", Description = "Завершение работы с ботом"}
             };
             var context = await ContextRepository.GetContext(update?.Message?.From?.Id ?? 0, ct);
-            if (context != null)
+            if (context != null && !string.IsNullOrEmpty(context.CurrentStep) && update.Message.Text != "/cancel")
             {
-                ProcessScenario(botClient, context, update, ct);
+                await ProcessScenario(botClient, context, update, ct);
                 return;
             }
             await botClient.SetMyCommands(commands);
@@ -148,7 +149,7 @@ public class UpdateHandler : IUpdateHandler
             {
                 replyMarkup = new ReplyKeyboardMarkup(new[]
                 {
-                    new KeyboardButton[] { "/showalltasks","/showtasks","/report" }
+                    new KeyboardButton[] {"/addtask","/showalltasks","/showtasks","/report" }
                 });
             }
             replyMarkup.ResizeKeyboard = true;
@@ -176,7 +177,7 @@ public class UpdateHandler : IUpdateHandler
                                 case "/exit":
 //                                    Environment.Exit(0);
                                     break;
-                                case string bc when bc.StartsWith("/addtask"):
+                                case "/addtask":
                                     await AddTaskAsync(botClient, update, ct, replyMarkup);
                                     break;
                                 case "/showtasks":
@@ -194,6 +195,9 @@ public class UpdateHandler : IUpdateHandler
                                     break;
                                 case "/report":
                                     await ReportAsync(botClient, update, ct, replyMarkup);
+                                    break;
+                                case "/cancel":
+                                    await CancelAsync(botClient, update, ct);
                                     break;
                                 case string bc when bc.StartsWith("/find "):
                                     await FindAsync(botClient, update, botCommand.Substring("/find ".Length), ct, replyMarkup);
@@ -253,7 +257,7 @@ public class UpdateHandler : IUpdateHandler
         {
             ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(new[]
             {
-                new KeyboardButton[] { "/showalltasks", "/showtasks", "/report" }
+                new KeyboardButton[] { "/addtask","/showalltasks", "/showtasks", "/report" }
             }) {
                 ResizeKeyboard = true,
             };
@@ -282,6 +286,7 @@ public class UpdateHandler : IUpdateHandler
  /removetask    - удаление задачи
  /completetask  - завершение задачи
  /showalltasks  - отображение списка задач со статусами
+ /cancel        - отмена выполнения сценария
  /report        - статистика по задачам
  /find          - поиск задачи
  /exit          - завершение работы с ботом";
@@ -536,6 +541,33 @@ public class UpdateHandler : IUpdateHandler
                                                   $" Активных: {active};", cancellationToken:ct, replyMarkup: replyMarkup);
     }
 
+    /// <summary>
+    /// Отмена выполнения сценария
+    /// </summary>
+    /// <param name="botClient"></param>
+    /// <param name="update"></param>
+    async Task CancelAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
+    {
+        var context = await ContextRepository.GetContext(update?.Message?.From?.Id ?? 0, ct);
+        
+        if (context != null && !string.IsNullOrEmpty(context.CurrentStep))
+        {
+            await ContextRepository.ResetContext(update?.Message?.From?.Id ?? 0, ct);
+            ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(new[]
+            {
+                new KeyboardButton[] { "/addtask","/showalltasks", "/showtasks", "/report" }
+            }) 
+            {
+                ResizeKeyboard = true,
+            };
+            await botClient.SendMessage(
+                update.Message.Chat,
+                "Отмена выполнения сценария",
+                cancellationToken: ct,
+                replyMarkup: replyMarkup);
+        }
+    }
+    
     /// <summary>
     /// Поиск задач
     /// </summary>

@@ -1,5 +1,6 @@
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Bot;
 
@@ -35,7 +36,14 @@ public class AddTaskScenario : IScenario
         {
             case null:
                 context.UserId = update?.Message?.From?.Id ?? 0;
-                await bot.SendMessage(update.Message.Chat,"Введите название задачи:", cancellationToken:ct);
+                ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(new[]
+                {
+                    new KeyboardButton[] { "/cancel","/addtask","/showalltasks", "/showtasks", "/report" }
+                }) 
+                {
+                    ResizeKeyboard = true,
+                };
+                await bot.SendMessage(update.Message.Chat,"Введите название задачи:", cancellationToken:ct, replyMarkup: replyMarkup);
                 context.CurrentStep = "Name";
                 result = ScenarioResult.Transition;
                 break;
