@@ -75,10 +75,6 @@ public class UpdateHandler : IUpdateHandler
         {
             await ContextRepository.ResetContext(update?.Message?.From?.Id ?? 0, ct);
         }
-        else
-        {
-            await ContextRepository.SetContext(update?.Message?.From?.Id ?? 0, context, ct);
-        }
     }
 
     public event MessageEventHandler? UpdateStarted;
@@ -353,6 +349,8 @@ public class UpdateHandler : IUpdateHandler
         }
         
         ScenarioContext context = new ScenarioContext(ScenarioType.AddTask);
+
+        await ContextRepository.SetContext(update?.Message?.From?.Id ?? 0, context, ct);
 
         await ProcessScenario(botClient, context, update, ct);
         

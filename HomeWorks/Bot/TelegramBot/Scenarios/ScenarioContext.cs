@@ -12,6 +12,7 @@ public class ScenarioContext
 
     public ScenarioContext(ScenarioType scenario)
     {
+        Data = new Dictionary<string, object>();
         CurrentScenario = scenario;
     }
 
