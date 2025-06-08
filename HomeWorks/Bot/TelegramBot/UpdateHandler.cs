@@ -10,20 +10,15 @@ namespace Bot;
 public delegate void MessageEventHandler(string message);
 public class UpdateHandler : IUpdateHandler
 {
-    private List<string> _registredUserCommands = new List<string>() {"/addtask","/showtasks","/removetask","/completetask","/showalltasks","/cancel","/exit","/start","/report","/find"};
+    private readonly List<string> _registredUserCommands = new List<string>() {"/addtask","/showtasks","/removetask","/completetask","/showalltasks","/cancel","/exit","/start","/report","/find"};
 
-    private IToDoService ToDoService { get; }
-    
-    private IUserService UserService { get; }
-    
-    private IScenario[] Scenarios { get; }
+    private readonly IToDoService _toDoService;
 
-    private IScenarioContextRepository ContextRepository { get; }
+    private readonly IUserService _userService;
 
-    /// <summary>
-    /// Максимальное количество задач, указанное пользователем. Значение -1 указывает на то, что атрибут не проинициализирован пользователем через запрос.
-    /// </summary>
-    int _taskCountLimit = 100;
+    private readonly IScenario[] _scenarios;
+
+    private readonly IScenarioContextRepository _contextRepository;
 
     /// <summary>
     /// Левая граница диапазона значений для максимально количества задач.
@@ -47,19 +42,19 @@ public class UpdateHandler : IUpdateHandler
 
     public UpdateHandler(IToDoService toDoService, IUserService userService, IEnumerable<IScenario> scenarios, IScenarioContextRepository contextRepository)
     {
-        ToDoService = toDoService;
-        UserService = userService;
-        ContextRepository = contextRepository;
-        Scenarios = (IScenario[]) scenarios;
+        _toDoService = toDoService;
+        _userService = userService;
+        _contextRepository = contextRepository;
+        _scenarios = (IScenario[]) scenarios;
     }
 
     IScenario GetScenario(ScenarioType scenario)
     {
-        var result = Scenarios.FirstOrDefault(s => s.CanHandle(scenario));//(s => s.CanHandle(scenario));
+        var result = _scenarios.FirstOrDefault(s => s.CanHandle(scenario));//(s => s.CanHandle(scenario));
 
         if (result == null)
         {
-            throw new Exception($"Scenario {scenario} not found");
+            throw new KeyNotFoundException($"Scenario {scenario} not found");
         }
         
         return result;
@@ -67,13 +62,18 @@ public class UpdateHandler : IUpdateHandler
 
     private async Task ProcessScenario(ITelegramBotClient botClient, ScenarioContext context, Update update, CancellationToken ct)
     {
-        IScenario scenario = GetScenario(context.CurrentScenario);
+        var scenario = GetScenario(context.CurrentScenario);
 
         var scenarioResult = await scenario.HandleMessageAsync(botClient, context, update, ct);
 
-        if (scenarioResult == ScenarioResult.Completed)
+        switch (scenarioResult)
         {
-            await ContextRepository.ResetContext(update?.Message?.From?.Id ?? 0, ct);
+            case ScenarioResult.Completed :
+                await _contextRepository.ResetContext(update?.Message?.From?.Id ?? 0, ct);
+                break;
+            case ScenarioResult.Transition:
+                await _contextRepository.SetContext(update?.Message?.From?.Id ?? 0, context, ct);
+                break;
         }
     }
 
@@ -114,15 +114,24 @@ public class UpdateHandler : IUpdateHandler
                 new BotCommand {Command = "find", Description = "Поиск задачи"},
                 new BotCommand {Command = "exit", Description = "Завершение работы с ботом"}
             };
-            var context = await ContextRepository.GetContext(update?.Message?.From?.Id ?? 0, ct);
-            if (context != null && !string.IsNullOrEmpty(context.CurrentStep) && update.Message.Text != "/cancel")
+            var context = await _contextRepository.GetContext(update?.Message?.From?.Id ?? 0, ct);
+            
+            if (update.Message.Text  == "/cancel")
+            {
+                await _contextRepository.ResetContext(update?.Message?.From?.Id ?? 0, ct);
+                await botClient.SendMessage(update.Message.Chat, "Текущий сценарий отменен", replyMarkup: KeyboardHelper.GetDefaultKeyboard(), cancellationToken: ct);
+                return;
+            }
+            
+            if (context != null && !string.IsNullOrEmpty(context.CurrentStep))
             {
                 await ProcessScenario(botClient, context, update, ct);
                 return;
             }
+            
             await botClient.SetMyCommands(commands);
             botCommand = update.Message.Text;
-            var toDoUser = (await UserService.GetUser(update.Message.From.Id));
+            var toDoUser = (await _userService.GetUser(update.Message.From.Id));
             ReplyKeyboardMarkup replyMarkup;
             if (toDoUser == null)
             {
@@ -143,10 +152,7 @@ public class UpdateHandler : IUpdateHandler
             }
             else
             {
-                replyMarkup = new ReplyKeyboardMarkup(new[]
-                {
-                    new KeyboardButton[] {"/addtask","/showalltasks","/showtasks","/report" }
-                });
+                replyMarkup = KeyboardHelper.GetDefaultKeyboard();
             }
             replyMarkup.ResizeKeyboard = true;
             UpdateStarted.Invoke(botCommand);
@@ -248,20 +254,14 @@ public class UpdateHandler : IUpdateHandler
      async Task Start(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
     {
         var from = update?.Message?.From;
-        var toDoUser = await UserService.RegisterUser(from?.Id ?? 0, from?.Username);
+        var toDoUser = await _userService.RegisterUser(from?.Id ?? 0, from?.Username);
         if (toDoUser != null)
         {
-            ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(new[]
-            {
-                new KeyboardButton[] { "/addtask","/showalltasks", "/showtasks", "/report" }
-            }) {
-                ResizeKeyboard = true,
-            };
             await botClient.SendMessage(
                 update.Message.Chat,
                 "Для отображения информации по задачам можно воспользоваться кнопками",
                 cancellationToken: cancellationToken,
-                replyMarkup: replyMarkup);
+                replyMarkup: KeyboardHelper.GetDefaultKeyboard());
         }
     }
    
@@ -322,7 +322,7 @@ public class UpdateHandler : IUpdateHandler
     /// <returns></returns>
     async Task<string> ReplayAsync (Update update, string message)
     {
-        var toDoUser = await UserService.GetUser(update.Message.From.Id);
+        var toDoUser = await _userService.GetUser(update.Message.From.Id);
         if (toDoUser == null || string.IsNullOrEmpty(toDoUser.TelegramUserName))
         {
             return message;
@@ -337,20 +337,11 @@ public class UpdateHandler : IUpdateHandler
     /// <param name="update"></param>
     async Task AddTaskAsync(ITelegramBotClient botClient, Update update, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
-        var toDoUser = await UserService.GetUser(update.Message.From.Id);
-        var userId = toDoUser?.UserId ?? Guid.Empty;
-        if (userId == Guid.Empty)
-        {
-            throw new Exception("Задачу добавить нельзя, так как пользователь не зарегистрирован в боте.");
-        }
-        if ((await ToDoService.GetAllByUserId(userId)).Count >= _taskCountLimit)
-        {
-            throw new TaskCountLimitException((int)_taskCountLimit);
-        }
+        var toDoUser = await _userService.GetUser(update.Message.From.Id);
         
-        ScenarioContext context = new ScenarioContext(ScenarioType.AddTask);
+        ScenarioContext context = new ScenarioContext(ScenarioType.AddTask, toDoUser.TelegramUserId);
 
-        await ContextRepository.SetContext(update?.Message?.From?.Id ?? 0, context, ct);
+        await _contextRepository.SetContext(update.Message.From.Id, context, ct);
 
         await ProcessScenario(botClient, context, update, ct);
         
@@ -363,20 +354,20 @@ public class UpdateHandler : IUpdateHandler
     /// <param name="update"></param>
     async Task ShowTasksAsync(ITelegramBotClient botClient, Update update, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
-        var toDoUser = await UserService.GetUser(update.Message.From.Id);
+        var toDoUser = await _userService.GetUser(update.Message.From.Id);
         var userId = toDoUser?.UserId ?? Guid.Empty;
         if (userId == Guid.Empty)
         {
             throw new Exception("Нельзя отобразить список задач, так как пользователь не зарегистрирован в боте.");
         }
         
-        if ((await ToDoService.GetAllByUserId(userId)).Count  == 0)
+        if ((await _toDoService.GetAllByUserId(userId)).Count  == 0)
         {
             await botClient.SendMessage(update.Message.Chat,"Список задач пуст.", cancellationToken:ct, replyMarkup: replyMarkup);
         }
         else
         {
-            foreach (var task in (await ToDoService.GetActiveByUserId(userId)))
+            foreach (var task in (await _toDoService.GetActiveByUserId(userId)))
             {
                 await botClient.SendMessage(update.Message.Chat,
                                         Regex.Replace($"{task.Name} - {task.CreatedAt} - `{task.Id}`","[-\\.\\(\\)\\[\\]\\+\\!\\=_\\|\\*\\~\\>\\#\\{\\}]","\\$0"),
@@ -394,21 +385,21 @@ public class UpdateHandler : IUpdateHandler
     /// <param name="update"></param>
     async Task RemoveTaskAsync(ITelegramBotClient botClient, Update update, string stringGuid, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
-        var toDoUser = await UserService.GetUser(update.Message.From.Id);
+        var toDoUser = await _userService.GetUser(update.Message.From.Id);
         var userId = toDoUser?.UserId ?? Guid.Empty;
         if (userId == Guid.Empty)
         {
             throw new Exception("Нельзя удалить задачу, так как пользователь не зарегистрирован в боте.");
         }
         
-        if ((await ToDoService.GetAllByUserId(userId)).Count  == 0) {
+        if ((await _toDoService.GetAllByUserId(userId)).Count  == 0) {
             await botClient.SendMessage(update.Message.Chat,"Список задач пуст, удалять нечего.", cancellationToken:ct, replyMarkup: replyMarkup);
             return;
         }
 
         if (Guid.TryParse(stringGuid, out var guid))
         {
-            ToDoService.Delete(guid);
+            _toDoService.Delete(guid);
             await botClient.SendMessage(update.Message.Chat,$"Задача с id \"{stringGuid}\" удалена.", cancellationToken:ct, replyMarkup: replyMarkup);
         }
         else
@@ -486,7 +477,7 @@ public class UpdateHandler : IUpdateHandler
     {
         if (Guid.TryParse(stringGuid, out var guid))
         {
-            ToDoService.MarkCompleted(guid);
+            _toDoService.MarkCompleted(guid);
         }
         else
         {
@@ -501,19 +492,19 @@ public class UpdateHandler : IUpdateHandler
     /// <param name="update"></param>
     async Task ShowAllTasksAsync(ITelegramBotClient botClient, Update update, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
-        var toDoUser = await UserService.GetUser(update.Message.From.Id);
+        var toDoUser = await _userService.GetUser(update.Message.From.Id);
         var userId = toDoUser?.UserId ?? Guid.Empty;
         if (userId == Guid.Empty)
         {
             throw new Exception("Нельзя отобразить список задач со статусом, так как пользователь не зарегистрирован в боте.");
         }
-        if ((await ToDoService.GetAllByUserId(userId)).Count  == 0)
+        if ((await _toDoService.GetAllByUserId(userId)).Count  == 0)
         {
             await botClient.SendMessage(update.Message.Chat,await ReplayAsync(update,"Список задач пуст."), cancellationToken:ct, replyMarkup: replyMarkup);
         }
         else
         {
-            foreach (var task in await ToDoService.GetAllByUserId(userId))
+            foreach (var task in await _toDoService.GetAllByUserId(userId))
             {
                 await botClient.SendMessage(update.Message.Chat,
                     Regex.Replace($"({Enum.GetName(task.State)}) {task.Name} - {task.CreatedAt} - `{task.Id}`","[-\\.\\(\\)\\[\\]\\+\\!\\=_\\|\\*\\~\\>\\#\\{\\}]","\\$0"),
@@ -531,7 +522,7 @@ public class UpdateHandler : IUpdateHandler
     async Task ReportAsync(ITelegramBotClient botClient, Update update, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
         var ( total, completed, active, generatedAt)
-                = (new ToDoReportService(ToDoService)).GetUserStats((await UserService.GetUser(update.Message.From.Id)).UserId);
+                = (new ToDoReportService(_toDoService)).GetUserStats((await _userService.GetUser(update.Message.From.Id)).UserId);
         
         await botClient.SendMessage(update.Message.Chat,$"Статистика по задачам на {generatedAt}." +
                                                   $" Всего: {total};" +
@@ -546,23 +537,17 @@ public class UpdateHandler : IUpdateHandler
     /// <param name="update"></param>
     async Task CancelAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
     {
-        var context = await ContextRepository.GetContext(update?.Message?.From?.Id ?? 0, ct);
+        var context = await _contextRepository.GetContext(update?.Message?.From?.Id ?? 0, ct);
         
         if (context != null && !string.IsNullOrEmpty(context.CurrentStep))
         {
-            await ContextRepository.ResetContext(update?.Message?.From?.Id ?? 0, ct);
-            ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(new[]
-            {
-                new KeyboardButton[] { "/addtask","/showalltasks", "/showtasks", "/report" }
-            }) 
-            {
-                ResizeKeyboard = true,
-            };
+            await _contextRepository.ResetContext(update?.Message?.From?.Id ?? 0, ct);
+
             await botClient.SendMessage(
                 update.Message.Chat,
                 "Отмена выполнения сценария",
                 cancellationToken: ct,
-                replyMarkup: replyMarkup);
+                replyMarkup: KeyboardHelper.GetDefaultKeyboard());
         }
     }
     
@@ -573,7 +558,7 @@ public class UpdateHandler : IUpdateHandler
     /// <param name="update"></param>
     async Task FindAsync(ITelegramBotClient botClient, Update update, string namePrefix, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
-        foreach (var task in await ToDoService.Find((await UserService.GetUser(update.Message.From.Id)), namePrefix))
+        foreach (var task in await _toDoService.Find((await _userService.GetUser(update.Message.From.Id)), namePrefix))
         {
             await botClient.SendMessage(update.Message.Chat,$"{task.Name} - {task.CreatedAt} - {task.Id}", cancellationToken:ct, replyMarkup: replyMarkup);
         }

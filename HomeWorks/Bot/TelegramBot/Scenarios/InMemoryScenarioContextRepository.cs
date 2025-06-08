@@ -11,7 +11,10 @@ public class InMemoryScenarioContextRepository : IScenarioContextRepository
 
     public async Task SetContext(long userId, ScenarioContext context, CancellationToken ct)
     {
-        _contexts.Add(userId, context);
+        if (!_contexts.ContainsKey(userId))
+        {
+            _contexts.Add(userId, context);
+        }
     }
 
     public async Task ResetContext(long userId, CancellationToken ct)

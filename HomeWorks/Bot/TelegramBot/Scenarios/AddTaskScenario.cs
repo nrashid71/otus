@@ -6,27 +6,23 @@ namespace Bot;
 
 public class AddTaskScenario : IScenario
 {
-    /// <summary>
-    /// Максимальная длина задачи, указанная пользователем. Значение -1 указывает на то, что атрибут не проинициализирован пользователем через запрос.
-    /// </summary>
-    private readonly int _taskLengthLimit = 1000;
 
-    private IUserService _userService;
+    private readonly IUserService _userService;
     
-    private IToDoService _toDoService;
+    private readonly IToDoService _toDoService;
 
-    public ScenarioType ScenarioType { set; get; }
+    private readonly ScenarioType _cenarioType;
 
     public AddTaskScenario(ScenarioType scenarioType, IUserService userService, IToDoService toDoService)
     {
-        ScenarioType = scenarioType;
+        _cenarioType = scenarioType;
         _userService = userService;
         _toDoService = toDoService;
     }
 
     public bool CanHandle(ScenarioType scenario)
     {
-        return scenario == ScenarioType;
+        return _cenarioType == scenario;
     }
 
     public async Task<ScenarioResult> HandleMessageAsync(ITelegramBotClient bot, ScenarioContext context, Update update, CancellationToken ct)
@@ -36,42 +32,30 @@ public class AddTaskScenario : IScenario
         switch (context.CurrentStep)
         {
             case null:
-                context.UserId = update?.Message?.From?.Id ?? 0;
                 replyMarkup = new ReplyKeyboardMarkup(new[]
                 {
-                    new KeyboardButton[] { "/cancel","/addtask","/showalltasks", "/showtasks", "/report" }
+                    new KeyboardButton[] { "/cancel",}
                 }) 
                 {
                     ResizeKeyboard = true,
                 };
+                
                 await bot.SendMessage(update.Message.Chat,"Введите название задачи:", cancellationToken:ct, replyMarkup: replyMarkup);
+                
                 context.CurrentStep = "Name";
+                
                 result = ScenarioResult.Transition;
+                
                 break;
             case "Name":
-                string description = update.Message.Text;
-                if (!string.IsNullOrEmpty(description))
+                string name = update.Message.Text;
+                
+                if (!string.IsNullOrEmpty(name))
                 {
-                    ToDoUser toDoUser = _userService.GetUser(update?.Message?.From?.Id ?? 0).Result;
+                    context.Data.Add("Name", name);
 
-                    if (description.Length > _taskLengthLimit)
-                    {
-                        await bot.SendMessage(update.Message.Chat,
-                                            $"Длина описания задачи {description.Length} превышает максимально допустимое значение {_taskLengthLimit}",
-                                            cancellationToken:ct);
-                        return ScenarioResult.Transition;
-                    }
-
-                    if ((await _toDoService.GetAllByUserId(toDoUser.UserId)).Any(t => t.Name == description))
-                    {
-                        await bot.SendMessage(update.Message.Chat,
-                            $"Задача \"{description}\" уже существует.",
-                            cancellationToken:ct);
-                        return ScenarioResult.Transition;
-                    }
-
-                    context.Data.Add("Name", description);
                     context.CurrentStep = "Deadline";
+
                     await bot.SendMessage(update.Message.Chat,"Введите дату завершения задачи:", cancellationToken:ct);
                     
                     return ScenarioResult.Transition;
@@ -80,6 +64,7 @@ public class AddTaskScenario : IScenario
                 break;
             case "Deadline":
                 string deadline = update.Message.Text;
+                
                 if (!string.IsNullOrEmpty(deadline))
                 {
                     ToDoUser toDoUser = _userService.GetUser(update?.Message?.From?.Id ?? 0).Result;
@@ -93,15 +78,7 @@ public class AddTaskScenario : IScenario
                     
                     _toDoService.Add(toDoUser, (string)context.Data["Name"], deadlineDate);
 
-                    replyMarkup  = new ReplyKeyboardMarkup(new[]
-                    {
-                        new KeyboardButton[] { "/addtask","/showalltasks", "/showtasks", "/report" }
-                    }) 
-                    {
-                        ResizeKeyboard = true,
-                    };
-                    
-                    await bot.SendMessage(update.Message.Chat,"Задача добавлена.", cancellationToken:ct, replyMarkup: replyMarkup);
+                    await bot.SendMessage(update.Message.Chat,"Задача добавлена.", cancellationToken:ct, replyMarkup: KeyboardHelper.GetDefaultKeyboard());
                     
                     return ScenarioResult.Completed;
                 }
