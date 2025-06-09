@@ -17,7 +17,7 @@ namespace Bot
             IScenarioContextRepository contextRepository = new InMemoryScenarioContextRepository();
             IScenario[] scenarios = new IScenario[]
             {
-                new AddTaskScenario(ScenarioType.AddTask, userService, toDoService)
+                new AddTaskScenario(userService, toDoService)
             };
 
             UpdateHandler handler = new UpdateHandler(toDoService, userService, scenarios, contextRepository);

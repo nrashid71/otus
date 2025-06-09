@@ -2,7 +2,7 @@ namespace Bot;
 
 public class ScenarioContext
 {
-    public long UserId { set; get; } //Id пользователя в Telegram
+    public long UserId { get; } //Id пользователя в Telegram
     
     public ScenarioType CurrentScenario { get; }
     

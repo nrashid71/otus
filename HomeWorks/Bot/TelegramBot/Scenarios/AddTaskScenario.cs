@@ -11,18 +11,15 @@ public class AddTaskScenario : IScenario
     
     private readonly IToDoService _toDoService;
 
-    private readonly ScenarioType _cenarioType;
-
-    public AddTaskScenario(ScenarioType scenarioType, IUserService userService, IToDoService toDoService)
+    public AddTaskScenario(IUserService userService, IToDoService toDoService)
     {
-        _cenarioType = scenarioType;
         _userService = userService;
         _toDoService = toDoService;
     }
 
     public bool CanHandle(ScenarioType scenario)
     {
-        return _cenarioType == scenario;
+        return scenario == ScenarioType.AddTask;
     }
 
     public async Task<ScenarioResult> HandleMessageAsync(ITelegramBotClient bot, ScenarioContext context, Update update, CancellationToken ct)
