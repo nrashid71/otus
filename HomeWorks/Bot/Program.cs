@@ -1,4 +1,5 @@
 ﻿using Telegram.Bot;
+using Telegram.Bot.Types.Enums;
 
 namespace Bot
 {
@@ -14,13 +15,19 @@ namespace Bot
             IUserRepository userRepository = new FileUserRepository(Path.Combine(Directory.GetCurrentDirectory(), "FileUserRepository"));
             IUserService userService = new UserService(userRepository);
 
+            IToDoListRepository toDoListRepository = new FileToDoListRepository(Path.Combine(Directory.GetCurrentDirectory(), "FileToDoListRepository"));
+            IToDoListService toDoListService = new ToDoListService(toDoListRepository);
+            
             IScenarioContextRepository contextRepository = new InMemoryScenarioContextRepository();
             IScenario[] scenarios = new IScenario[]
             {
-                new AddTaskScenario(userService, toDoService)
+                new AddTaskScenario(userService, toDoListService, toDoService),
+                new AddListScenario(userService, toDoListService),
+                new DeleteListScenario(userService, toDoListService, toDoService)
             };
 
-            UpdateHandler handler = new UpdateHandler(toDoService, userService, scenarios, contextRepository);
+            
+            UpdateHandler handler = new UpdateHandler(toDoService, userService, scenarios, contextRepository, toDoListService);
             
             string token = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");  // в linux для обычного пользователя
             
@@ -38,7 +45,9 @@ namespace Bot
                 var botClient = new TelegramBotClient(token);
 
                 var ct = new CancellationTokenSource();
-                botClient.StartReceiving(handler, cancellationToken:ct.Token);
+                botClient.StartReceiving(handler, cancellationToken:ct.Token,
+                    receiverOptions: new(){AllowedUpdates=[UpdateType.Message, UpdateType.CallbackQuery, UpdateType.Unknown]}
+                    );
                 while (true)
                 {
                     Console.WriteLine("Нажмите клавишу A для выхода");
