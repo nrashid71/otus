@@ -1,8 +1,10 @@
+using System.Collections.Concurrent;
+
 namespace Bot;
 
 public class InMemoryScenarioContextRepository : IScenarioContextRepository
 {
-    private Dictionary<long, ScenarioContext>  _contexts = new Dictionary<long, ScenarioContext>();
+    private ConcurrentDictionary<long, ScenarioContext>  _contexts = new ConcurrentDictionary<long, ScenarioContext>();
         
     public async Task<ScenarioContext?> GetContext(long userId, CancellationToken ct)
     {
@@ -13,13 +15,12 @@ public class InMemoryScenarioContextRepository : IScenarioContextRepository
     {
         if (!_contexts.ContainsKey(userId))
         {
-            _contexts.Add(userId, context);
+            _contexts.TryAdd(userId, context);
         }
     }
 
     public async Task ResetContext(long userId, CancellationToken ct)
     {
-        if (_contexts.ContainsKey(userId))
-            _contexts.Remove(userId);
+            _contexts.Remove(userId, out _);
     }
 }

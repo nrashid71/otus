@@ -7,8 +7,9 @@ public class ToDoItem
     public ToDoUser ToDoUser { get; init; }
     public string Name { get; set; }
     public DateTime CreatedAt { get; init; }
-    
     public DateTime Deadline { set; get; }
+    
+    public ToDoList? List { set; get; }
     public ToDoItemState State
     {
         get => _state;
@@ -23,7 +24,7 @@ public class ToDoItem
     }
     public DateTime? StateChangedAt { get; set; }
 
-    public ToDoItem(string name, ToDoUser toDoUser, DateTime deadline)
+    public ToDoItem(string name, ToDoUser toDoUser, DateTime deadline, ToDoList? list)
     {
         Id = Guid.NewGuid();
         ToDoUser = toDoUser;
@@ -31,5 +32,6 @@ public class ToDoItem
         CreatedAt = DateTime.Now;
         State = ToDoItemState.Active;
         Deadline = deadline;
+        List = list;
     }
 }

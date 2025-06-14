@@ -8,7 +8,7 @@ public static class KeyboardHelper
     {
         return new ReplyKeyboardMarkup(new[]
         {
-            new KeyboardButton[] { "/addtask", "/showalltasks", "/showtasks", "/report" }
+            new KeyboardButton[] { "/addtask", "/show", "/report" }
         })
         {
             ResizeKeyboard = true
