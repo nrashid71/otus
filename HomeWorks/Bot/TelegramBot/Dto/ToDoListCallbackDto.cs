@@ -6,6 +6,14 @@ public class ToDoListCallbackDto : CallbackDto
 {
     public Guid? ToDoListId { get; set; }
 
+    public ToDoListCallbackDto()
+    {
+    }
+    public ToDoListCallbackDto(string action, Guid? toDoListId = null)
+    {
+        Action = action;
+        ToDoListId = toDoListId;
+    }
     public static new ToDoListCallbackDto FromString(string input)
     {
         var dto = new ToDoListCallbackDto();

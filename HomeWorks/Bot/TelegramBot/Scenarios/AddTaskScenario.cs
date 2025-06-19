@@ -84,7 +84,7 @@ public class AddTaskScenario : IScenario
                 
                 inlineKeyboardButtonsList.AddRange(
                     _toDoListService.GetUserLists(((ToDoUser)context.Data["User"]).UserId, ct).Result.Select(
-                        l => new[]{InlineKeyboardButton.WithCallbackData(l.Name, "addtask|" + l.Id)}));
+                        l => new[]{InlineKeyboardButton.WithCallbackData(l.Name, new ToDoListCallbackDto("addtask", l.Id).ToString())}));
                 
                 var inlineKeyboard = new InlineKeyboardMarkup(inlineKeyboardButtonsList);
                 

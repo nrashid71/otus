@@ -10,6 +10,14 @@ public class ToDoListService : IToDoListService
     }
     public async Task<ToDoList> Add(ToDoUser user, string name, CancellationToken ct)
     {
+        if (name.Length > 10)
+        {
+            throw new ArgumentOutOfRangeException($"Размер названия списка \"{name}\" превышает 10 символов");
+        }
+        if (_toDoListRepository.ExistsByName(user.UserId, name, ct).Result)
+        {
+            throw new ArgumentOutOfRangeException($"Список с названием \"{name}\" уже существует.");
+        }
         var toDoList = new ToDoList(name, user);
         _toDoListRepository.Add(toDoList, ct);
         return toDoList;

@@ -33,7 +33,7 @@ public class DeleteListScenario : IScenario
                 context.Data.Add("User", toDoUser);
                 var inlineKeyboard = new InlineKeyboardMarkup(
                     _toDoListService.GetUserLists(toDoUser.UserId, ct).Result.Select(
-                             l => new[]{InlineKeyboardButton.WithCallbackData(l.Name, "deletelist|" + l.Id)}));
+                             l => new[]{InlineKeyboardButton.WithCallbackData(l.Name, new ToDoListCallbackDto("deletelist", l.Id).ToString())}));
                 context.CurrentStep = "Approve";
                 await bot.SendMessage(update.CallbackQuery.Message.Chat.Id,
                     "Выберите список для удаления",

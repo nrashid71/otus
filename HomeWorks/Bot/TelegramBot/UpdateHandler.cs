@@ -239,7 +239,7 @@ public class UpdateHandler : IUpdateHandler
                                     await AddTaskAsync(botClient, update, ct, replyMarkup);
                                     break;
                                 case "/show":
-                                    await showAsync(botClient, update, ct, replyMarkup);
+                                    await ShowAsync(botClient, update, ct, replyMarkup);
                                     break;
                                 case string bc when bc.StartsWith("/removetask "):
                                     await RemoveTaskAsync(botClient, update,
@@ -406,19 +406,19 @@ public class UpdateHandler : IUpdateHandler
     /// </summary>
     /// <param name="botClient"></param>
     /// <param name="update"></param>
-    async Task showAsync(ITelegramBotClient botClient, Update update, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
+    async Task ShowAsync(ITelegramBotClient botClient, Update update, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
         var toDoUser = await _userService.GetUser(update.Message.From.Id);
         var userId = toDoUser?.UserId ?? Guid.Empty;
         
         List<InlineKeyboardButton[]> inlineKeyboardButtonsList = new List<InlineKeyboardButton[]>()
         {
-            new []{InlineKeyboardButton.WithCallbackData("📌Без списка", "show|")}
+            new []{InlineKeyboardButton.WithCallbackData("📌Без списка", new ToDoListCallbackDto("show").ToString())}
         };
         var r = _toDoListService.GetUserLists(userId, ct).Result.Select(
-            l => new[] { InlineKeyboardButton.WithCallbackData(l.Name, "show|" + l.Id) }
+            l => new[] { InlineKeyboardButton.WithCallbackData(l.Name, new ToDoListCallbackDto("show", l.Id).ToString()) }
         );
-        if (r.Count() > 0)
+        if (r.Any())
         {
             inlineKeyboardButtonsList.AddRange(r);
         }
