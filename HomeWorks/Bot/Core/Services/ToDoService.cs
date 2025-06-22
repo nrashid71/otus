@@ -30,7 +30,7 @@ public class ToDoService : IToDoService
         return result;
     }
 
-    public async Task<ToDoItem> Add(ToDoUser user, string name, DateTime deadline)
+    public async Task<ToDoItem> Add(ToDoUser user, string name, DateTime deadline, ToDoList? list)
     {
         
         if (name.Length > _taskLengthLimit)
@@ -48,7 +48,7 @@ public class ToDoService : IToDoService
             throw new TaskCountLimitException((int)_taskCountLimit);
         }        
         
-        ToDoItem toDoItem = new ToDoItem(name, user, deadline);
+        ToDoItem toDoItem = new ToDoItem(name, user, deadline, list);
         
         await _toDoRepository.Add(toDoItem);
         
@@ -75,6 +75,11 @@ public class ToDoService : IToDoService
     {
         var r = await _toDoRepository.Find(user.UserId, (t) => t.Name.StartsWith(namePrefix));
         return r.ToList().AsReadOnly();
+    }
+
+    public async Task<IReadOnlyList<ToDoItem>> GetByUserIdAndList(Guid userId, Guid? listId, CancellationToken ct)
+    {
+        return GetAllByUserId(userId).Result.Where(t => t.List?.Id == listId).ToList().AsReadOnly();
     }
 }
 
