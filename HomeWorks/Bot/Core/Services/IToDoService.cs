@@ -9,4 +9,5 @@ public interface IToDoService
     Task Delete(Guid id);
     Task<IReadOnlyList<ToDoItem>> Find(ToDoUser user, string namePrefix);
     Task<IReadOnlyList<ToDoItem>> GetByUserIdAndList(Guid userId, Guid? listId, CancellationToken ct);
+    Task<ToDoItem?> Get(Guid toDoItemId, CancellationToken ct);
 }

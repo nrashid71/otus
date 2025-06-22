@@ -54,7 +54,6 @@ public class ToDoService : IToDoService
         
         return toDoItem;
     }
-
     public async Task MarkCompleted(Guid id)
     {
         var task = await _toDoRepository.GetByGuid(id);
@@ -80,6 +79,10 @@ public class ToDoService : IToDoService
     public async Task<IReadOnlyList<ToDoItem>> GetByUserIdAndList(Guid userId, Guid? listId, CancellationToken ct)
     {
         return GetAllByUserId(userId).Result.Where(t => t.List?.Id == listId).ToList().AsReadOnly();
+    }
+    public async Task<ToDoItem?> Get(Guid toDoItemId, CancellationToken ct)
+    {
+        return await _toDoRepository.GetByGuid(toDoItemId);        
     }
 }
 
