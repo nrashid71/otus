@@ -29,7 +29,7 @@ public class DeleteListScenario : IScenario
         switch (context.CurrentStep)
         {
             case null:
-                ToDoUser toDoUser = _userService.GetUser(update?.CallbackQuery?.From?.Id ?? 0).Result;
+                ToDoUser toDoUser = _userService.GetUser(update?.CallbackQuery?.From?.Id ?? 0, ct).Result;
                 context.Data.Add("User", toDoUser);
                 var inlineKeyboard = new InlineKeyboardMarkup(
                     _toDoListService.GetUserLists(toDoUser.UserId, ct).Result.Select(
@@ -48,13 +48,7 @@ public class DeleteListScenario : IScenario
                 await bot.SendMessage(update.CallbackQuery.Message.Chat.Id,
                     $"Подтверждаете удаление списка {toDoList?.Name} и всех его задач",
                     cancellationToken:ct,
-                    replyMarkup: new InlineKeyboardMarkup(
-                        new[]{
-                            new[]{
-                                    InlineKeyboardButton.WithCallbackData("✅Да", "yes"),
-                                    InlineKeyboardButton.WithCallbackData("❌Нет", "no")
-                            }
-                        })
+                    replyMarkup: KeyboardHelper.YesNoKeyboard()
                     );
                 return ScenarioResult.Transition;
             case "Delete":
@@ -65,7 +59,7 @@ public class DeleteListScenario : IScenario
                     foreach (var t in _toDoService
                                  .GetByUserIdAndList(((ToDoUser)context.Data["User"]).UserId, toDoListId, ct).Result)
                     {
-                        await _toDoService.Delete(t.Id);
+                        await _toDoService.Delete(t.Id, ct);
                     }
                     await _toDoListService.Delete(toDoListId, ct);
                     await bot.SendMessage(update.CallbackQuery.Message.Chat,"Список удален", cancellationToken:ct, replyMarkup: KeyboardHelper.GetDefaultKeyboard());

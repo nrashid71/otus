@@ -5,10 +5,7 @@ public class PagedListCallbackDto : ToDoListCallbackDto
     public int Page { get; set; }
 
     public ToDoItemState ToDoItemState { get; set; }
-    PagedListCallbackDto()
-    {
-    }
-    public PagedListCallbackDto(string action, Guid? toDoListId, int page, ToDoItemState toDoItemState)
+    public PagedListCallbackDto(string? action, Guid? toDoListId, int page, ToDoItemState toDoItemState)
     {
         Action = action;
         ToDoListId = toDoListId;
@@ -17,38 +14,12 @@ public class PagedListCallbackDto : ToDoListCallbackDto
     }
     public static new PagedListCallbackDto FromString(string input)
     {
-        var dto = new PagedListCallbackDto();
         var array = input.Split('|');
-        if (array.Length > 0)
-        {
-            dto.Action = array[0];
-        }
-        if (array.Length > 1)
-        {
-            if (Guid.TryParse(array[1], out Guid val))
-            {
-                dto.ToDoListId = val;
-            }
-        }        
-        if (array.Length > 2)
-        {
-            if (int.TryParse(array[2], out int val))
-            {
-                dto.Page = val;
-            }
-        }
-        if (array.Length > 3)
-        {
-            if (Enum.TryParse(array[3], out ToDoItemState val))
-            {
-                dto.ToDoItemState = val;
-            }
-        }
-        else
-        {
-            dto.ToDoItemState = ToDoItemState.Active;
-        }
-        return dto;        
+        return new PagedListCallbackDto(
+            action: (array.Length > 0 ? array[0] : null),
+            toDoListId: (array.Length > 1 ? (Guid.TryParse(array[1], out Guid val1) ? val1 : null) : null),
+            page: (array.Length > 2 ? (int.TryParse(array[2], out int val2) ? val2 : 0) : 0),
+            toDoItemState: (array.Length > 3 ? (Enum.TryParse(array[3], out ToDoItemState val3)? val3:ToDoItemState.Active) : ToDoItemState.Active));
     }
 
     public override string ToString()

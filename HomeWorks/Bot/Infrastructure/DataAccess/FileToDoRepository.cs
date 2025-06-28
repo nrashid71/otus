@@ -54,14 +54,14 @@ public class FileToDoRepository : IToDoRepository
                 .Where(item => item != null)
                 .Select(item => new Index(item.ToDoUser.UserId, item.Id)).ToList());
     }
-    public async Task<ToDoItem?> GetByGuid(Guid id)
+    public async Task<ToDoItem?> GetByGuid(Guid id, CancellationToken ct)
     {
         return (await Find(
             (await ReadFileIndex()).FirstOrDefault(record => record.ItemId == id)?.UserId ?? Guid.Empty,
-            item => item.Id == id)).FirstOrDefault();
+            item => item.Id == id, ct)).FirstOrDefault();
     }
 
-    public async Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId)
+    public async Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId, CancellationToken ct)
     {
         var userFolder = Path.Combine(_baseDirecory, userId.ToString());
         if (!Directory.Exists(userFolder))
@@ -90,12 +90,12 @@ public class FileToDoRepository : IToDoRepository
         }
     }
 
-    public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId)
+    public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId, CancellationToken ct)
     {
-        return (await GetAllByUserId(userId)).Where(i => i.State == ToDoItemState.Active).ToList().AsReadOnly();
+        return (await GetAllByUserId(userId, ct)).Where(i => i.State == ToDoItemState.Active).ToList().AsReadOnly();
     }
 
-    public async Task Add(ToDoItem item)
+    public async Task Add(ToDoItem item, CancellationToken ct)
     {
         var index = await ReadFileIndex();
         var userFolder = Path.Combine(_baseDirecory, item.ToDoUser.UserId.ToString());
@@ -109,13 +109,13 @@ public class FileToDoRepository : IToDoRepository
         await WriteFileIndex(index);
     }
 
-    public async Task Update(ToDoItem item)
+    public async Task Update(ToDoItem item, CancellationToken ct)
     {
         var filePath = Path.Combine(_baseDirecory, item.ToDoUser.UserId.ToString(), $"{item.Id.ToString()}.json");
         await File.WriteAllTextAsync(filePath, JsonSerializer.Serialize(item, new JsonSerializerOptions { WriteIndented = true }));   
     }
 
-    public async Task Delete(Guid id)
+    public async Task Delete(Guid id, CancellationToken ct)
     {
         var indexes = (await ReadFileIndex());
         var index = indexes.FirstOrDefault(record => record.ItemId == id);
@@ -130,18 +130,18 @@ public class FileToDoRepository : IToDoRepository
         }
     }
 
-    public async Task<bool> ExistsByName(Guid userId, string name)
+    public async Task<bool> ExistsByName(Guid userId, string name, CancellationToken ct)
     {
-        return (await GetAllByUserId(userId)).Any(i => i.Name == name);
+        return (await GetAllByUserId(userId, ct)).Any(i => i.Name == name);
     }
 
-    public async Task<int> CountActive(Guid userId)
+    public async Task<int> CountActive(Guid userId, CancellationToken ct)
     {
-        return (await GetAllByUserId(userId)).Count();
+        return (await GetAllByUserId(userId, ct)).Count();
     }
 
-    public async Task<IReadOnlyList<ToDoItem>> Find(Guid userId, Func<ToDoItem, bool> predicate)
+    public async Task<IReadOnlyList<ToDoItem>> Find(Guid userId, Func<ToDoItem, bool> predicate, CancellationToken ct)
     {
-        return (await GetAllByUserId(userId)).Where(t => predicate(t)).ToList().AsReadOnly();
+        return (await GetAllByUserId(userId, ct)).Where(t => predicate(t)).ToList().AsReadOnly();
     }
 }

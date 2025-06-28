@@ -9,11 +9,11 @@ public class ToDoReportService: IToDoReportService
         _toDoService = toDoService;
     }
 
-    public (int total, int completed, int active, DateTime generatedAt) GetUserStats(Guid userId)
+    public (int total, int completed, int active, DateTime generatedAt) GetUserStats(Guid userId, CancellationToken ct)
     {
-        return (total: _toDoService.GetAllByUserId(userId).Result.Count,
-            completed: _toDoService.GetAllByUserId(userId).Result.Count - _toDoService.GetActiveByUserId(userId).Result.Count,
-            active: _toDoService.GetActiveByUserId(userId).Result.Count,
+        return (total: _toDoService.GetAllByUserId(userId, ct).Result.Count,
+            completed: _toDoService.GetAllByUserId(userId, ct).Result.Count - _toDoService.GetActiveByUserId(userId, ct).Result.Count,
+            active: _toDoService.GetActiveByUserId(userId, ct).Result.Count,
             generatedAt: DateTime.Now);
     }
 }

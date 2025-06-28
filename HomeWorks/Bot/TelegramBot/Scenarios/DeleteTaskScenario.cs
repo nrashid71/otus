@@ -23,19 +23,13 @@ public class DeleteTaskScenario: IScenario
         {
             case null:
                 var toDoItemCallbackDto = ToDoItemCallbackDto.FromString(update.CallbackQuery.Data);
-                var toDoItem = _toDoService.Get(toDoItemCallbackDto.ToDoItemId, ct).Result;
+                var toDoItem = await _toDoService.Get(toDoItemCallbackDto.ToDoItemId, ct);
                 context.Data.Add("ToDoItem", toDoItem.Id);
                 context.CurrentStep = "Delete";
                 await bot.SendMessage(update.CallbackQuery.Message.Chat.Id,
                     $"Подтверждаете удаление задачи {toDoItem?.Name}",
                     cancellationToken:ct,
-                    replyMarkup: new InlineKeyboardMarkup(
-                        new[]{
-                            new[]{
-                                    InlineKeyboardButton.WithCallbackData("✅Да", "yes"),
-                                    InlineKeyboardButton.WithCallbackData("❌Нет", "no")
-                            }
-                        })
+                    replyMarkup: KeyboardHelper.YesNoKeyboard()
                     );
                 return ScenarioResult.Transition;
             case "Delete":
@@ -43,7 +37,7 @@ public class DeleteTaskScenario: IScenario
                 if (callbackDto.Action == "yes")
                 {
                      var toDoItemId = (Guid)context.Data["ToDoItem"];
-                     await _toDoService.Delete(toDoItemId);
+                     await _toDoService.Delete(toDoItemId, ct);
                      await bot.SendMessage(update.CallbackQuery.Message.Chat,"Задача удалена", cancellationToken:ct, replyMarkup: KeyboardHelper.GetDefaultKeyboard());
                 }
                 else

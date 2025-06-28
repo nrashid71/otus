@@ -106,7 +106,7 @@ public class UpdateHandler : IUpdateHandler
     }
     private async Task OnCallbackQuery(ITelegramBotClient botClient, Update update, CancellationToken ct)
     {
-        var toDoUser = (await _userService.GetUser(update.CallbackQuery.From.Id));
+        var toDoUser = (await _userService.GetUser(update.CallbackQuery.From.Id, ct));
         if (toDoUser == null)
         {
             return;
@@ -126,27 +126,18 @@ public class UpdateHandler : IUpdateHandler
         switch (callbackDto.Action)
         {
             case "show" :
-                await ShowTasksAsync(PagedListCallbackDto.FromString(update.CallbackQuery.Data), /*ToDoItemState.Active,*/ botClient, update, ct);
+                await ShowTasksAsync(PagedListCallbackDto.FromString(update.CallbackQuery.Data), botClient, update, ct);
                 return;
             case "showtask" :
                 await ShowOneTaskAsync(ToDoItemCallbackDto.FromString(update.CallbackQuery.Data), botClient, update, ct);
-                return;
-            case "prev" :
-                await ShowTasksAsync(PagedListCallbackDto.FromString(update.CallbackQuery.Data), /*ToDoItemState.Active,*/ botClient, update, ct);
-                return;
-            case "next" :
-                await ShowTasksAsync(PagedListCallbackDto.FromString(update.CallbackQuery.Data), /*ToDoItemState.Active,*/ botClient, update, ct);
                 return;
             case "show_completed":
                 var dto = PagedListCallbackDto.FromString(update.CallbackQuery.Data);
                 dto.ToDoItemState = ToDoItemState.Completed;
                 await ShowTasksAsync(dto, /*ToDoItemState.Completed,*/ botClient, update, ct);
                 return;
-            // case "show_active":
-            //     await showTasksAsync(PagedListCallbackDto.FromString(update.CallbackQuery.Data), /*ToDoItemState.Active,*/ botClient, update, ct);
-            //     return;
             case "completetask" :
-                _toDoService.MarkCompleted(ToDoItemCallbackDto.FromString(update.CallbackQuery.Data).ToDoItemId);
+                _toDoService.MarkCompleted(ToDoItemCallbackDto.FromString(update.CallbackQuery.Data).ToDoItemId, ct);
                 await botClient.SendMessage(update.CallbackQuery.Message.Chat, "Задача выполнена", cancellationToken: ct);
                 return;
             case "deletetask" :
@@ -212,7 +203,7 @@ public class UpdateHandler : IUpdateHandler
             
             await botClient.SetMyCommands(commands);
             botCommand = update.Message.Text;
-            var toDoUser = (await _userService.GetUser(update.Message.From.Id));
+            var toDoUser = (await _userService.GetUser(update.Message.From.Id, ct));
             ReplyKeyboardMarkup replyMarkup;
             if (toDoUser == null)
             {
@@ -326,7 +317,7 @@ public class UpdateHandler : IUpdateHandler
      async Task Start(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
     {
         var from = update?.Message?.From;
-        var toDoUser = await _userService.RegisterUser(from?.Id ?? 0, from?.Username);
+        var toDoUser = await _userService.RegisterUser(from?.Id ?? 0, from?.Username, cancellationToken);
         if (toDoUser != null)
         {
             await botClient.SendMessage(
@@ -358,7 +349,7 @@ public class UpdateHandler : IUpdateHandler
  /report        - статистика по задачам
  /find          - поиск задачи
  /exit          - завершение работы с ботом";
-        await botClient.SendMessage(update.Message.Chat, await ReplayAsync(update, helpMessage), cancellationToken:ct, replyMarkup: replyMarkup);
+        await botClient.SendMessage(update.Message.Chat, await ReplayAsync(update, helpMessage, ct), cancellationToken:ct, replyMarkup: replyMarkup);
     }
     
     /// <summary>
@@ -372,7 +363,7 @@ public class UpdateHandler : IUpdateHandler
     {
         if (!string.IsNullOrEmpty(str))
         {
-            await botClient.SendMessage(update.Message.Chat,await ReplayAsync(update,$"Команда {str} не предусмотрена к обработке.\n" + infoMessage), cancellationToken:ct, replyMarkup: replyMarkup);
+            await botClient.SendMessage(update.Message.Chat,await ReplayAsync(update,$"Команда {str} не предусмотрена к обработке.\n" + infoMessage, ct), cancellationToken:ct, replyMarkup: replyMarkup);
         }
     }
 
@@ -383,7 +374,7 @@ public class UpdateHandler : IUpdateHandler
     /// <param name="update"></param>
     async Task InfoAsync(ITelegramBotClient botClient, Update update, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
-        await botClient.SendMessage(update.Message.Chat,await ReplayAsync(update,"Версия программы 0.1.0-alpha. Дата создания 22.02.2025."), cancellationToken:ct, replyMarkup: replyMarkup);
+        await botClient.SendMessage(update.Message.Chat,await ReplayAsync(update,"Версия программы 0.1.0-alpha. Дата создания 22.02.2025.", ct), cancellationToken:ct, replyMarkup: replyMarkup);
     }
     
     /// <summary>
@@ -392,9 +383,9 @@ public class UpdateHandler : IUpdateHandler
     /// </summary>
     /// <param name="message">Текст сообщения</param>
     /// <returns></returns>
-    async Task<string> ReplayAsync (Update update, string message)
+    async Task<string> ReplayAsync (Update update, string message, CancellationToken ct)
     {
-        var toDoUser = await _userService.GetUser(update.Message.From.Id);
+        var toDoUser = await _userService.GetUser(update.Message.From.Id, ct);
         if (toDoUser == null || string.IsNullOrEmpty(toDoUser.TelegramUserName))
         {
             return message;
@@ -409,7 +400,7 @@ public class UpdateHandler : IUpdateHandler
     /// <param name="update"></param>
     async Task AddTaskAsync(ITelegramBotClient botClient, Update update, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
-        var toDoUser = await _userService.GetUser(update.Message.From.Id);
+        var toDoUser = await _userService.GetUser(update.Message.From.Id, ct);
         
         ScenarioContext context = new ScenarioContext(ScenarioType.AddTask, toDoUser.TelegramUserId);
 
@@ -426,7 +417,7 @@ public class UpdateHandler : IUpdateHandler
     /// <param name="update"></param>
     async Task ShowAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
     {
-        var toDoUser = await _userService.GetUser(update.Message.From.Id);
+        var toDoUser = await _userService.GetUser(update.Message.From.Id,ct);
         var userId = toDoUser?.UserId ?? Guid.Empty;
         
         List<InlineKeyboardButton[]> inlineKeyboardButtonsList = new List<InlineKeyboardButton[]>()
@@ -454,7 +445,7 @@ public class UpdateHandler : IUpdateHandler
     }
     async Task ShowTasksAsync(PagedListCallbackDto dtoList, /*ToDoItemState toDoItemState,*/ ITelegramBotClient botClient, Update update, CancellationToken ct)
     {
-        var toDoUser = await _userService.GetUser(update.CallbackQuery.From.Id);
+        var toDoUser = await _userService.GetUser(update.CallbackQuery.From.Id, ct);
         var userId = toDoUser?.UserId ?? Guid.Empty;
         if (userId == Guid.Empty)
         {
@@ -488,12 +479,12 @@ public class UpdateHandler : IUpdateHandler
         
         if (listDto.Page > 0)
         {
-            inlineKeyboardButtons.Add(InlineKeyboardButton.WithCallbackData("⬅️", (new PagedListCallbackDto("prev", listDto.ToDoListId, listDto.Page - 1, listDto.ToDoItemState)).ToString()));
+            inlineKeyboardButtons.Add(InlineKeyboardButton.WithCallbackData("⬅️", (new PagedListCallbackDto("show", listDto.ToDoListId, listDto.Page - 1, listDto.ToDoItemState)).ToString()));
         }
         
         if (listDto.Page < (double)callbackData.Count / _pageSize - 1)
         {
-            inlineKeyboardButtons.Add(InlineKeyboardButton.WithCallbackData("\u27a1\ufe0f", (new PagedListCallbackDto("next", listDto.ToDoListId, listDto.Page + 1, listDto.ToDoItemState)).ToString()));
+            inlineKeyboardButtons.Add(InlineKeyboardButton.WithCallbackData("\u27a1\ufe0f", (new PagedListCallbackDto("show", listDto.ToDoListId, listDto.Page + 1, listDto.ToDoItemState)).ToString()));
         }
 
         inlineKeyboardButtonsList.Add(inlineKeyboardButtons.ToArray());
@@ -506,7 +497,7 @@ public class UpdateHandler : IUpdateHandler
 
     async Task ShowOneTaskAsync(ToDoItemCallbackDto toDoItemCallbackDto, ITelegramBotClient botClient, Update update, CancellationToken ct)
     {
-        var toDoUser = await _userService.GetUser(update.CallbackQuery.From.Id);
+        var toDoUser = await _userService.GetUser(update.CallbackQuery.From.Id, ct);
         var userId = toDoUser?.UserId ?? Guid.Empty;
         if (userId == Guid.Empty)
         {
@@ -602,7 +593,7 @@ public class UpdateHandler : IUpdateHandler
     async Task ReportAsync(ITelegramBotClient botClient, Update update, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
         var ( total, completed, active, generatedAt)
-                = (new ToDoReportService(_toDoService)).GetUserStats((await _userService.GetUser(update.Message.From.Id)).UserId);
+                = (new ToDoReportService(_toDoService)).GetUserStats((await _userService.GetUser(update.Message.From.Id, ct)).UserId, ct);
         
         await botClient.SendMessage(update.Message.Chat,$"Статистика по задачам на {generatedAt}." +
                                                   $" Всего: {total};" +
@@ -638,7 +629,7 @@ public class UpdateHandler : IUpdateHandler
     /// <param name="update"></param>
     async Task FindAsync(ITelegramBotClient botClient, Update update, string namePrefix, CancellationToken ct, ReplyKeyboardMarkup replyMarkup)
     {
-        foreach (var task in await _toDoService.Find((await _userService.GetUser(update.Message.From.Id)), namePrefix))
+        foreach (var task in await _toDoService.Find((await _userService.GetUser(update.Message.From.Id, ct)), namePrefix, ct))
         {
             await botClient.SendMessage(update.Message.Chat,$"{task.Name} - {task.CreatedAt} - {task.Id}", cancellationToken:ct, replyMarkup: replyMarkup);
         }

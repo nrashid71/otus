@@ -33,17 +33,17 @@ public class FileUserRepository : IUserRepository
             .Where(user => user != null);
     }
     
-    public async Task<ToDoUser?> GetUser(Guid userId)
+    public async Task<ToDoUser?> GetUser(Guid userId, CancellationToken ct)
     {
         return (await GetAll()).FirstOrDefault(user => user.UserId == userId);        
     }
 
-    public async Task<ToDoUser?> GetUserByTelegramUserId(long telegramUserId)
+    public async Task<ToDoUser?> GetUserByTelegramUserId(long telegramUserId, CancellationToken ct)
     {
         return (await GetAll()).FirstOrDefault(user => user.TelegramUserId == telegramUserId);        
     }
 
-    public async Task Add(ToDoUser user)
+    public async Task Add(ToDoUser user, CancellationToken ct)
     {
         var filePath = Path.Combine(_baseDirecory, $"{user.UserId}.json");
         await File.WriteAllTextAsync(filePath, JsonSerializer.Serialize(user, new JsonSerializerOptions { WriteIndented = true }));           

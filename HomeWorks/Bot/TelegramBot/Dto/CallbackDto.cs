@@ -2,7 +2,7 @@ namespace Bot.Dto;
 
 public class CallbackDto
 {
-    public string Action { get; set; }
+    public string? Action { get; set; }
 
     public static CallbackDto FromString(string input)
     {

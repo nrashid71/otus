@@ -33,7 +33,7 @@ public class AddTaskScenario : IScenario
         switch (context.CurrentStep)
         {
             case null:
-                toDoUser = _userService.GetUser(update?.Message?.From?.Id ?? 0).Result;
+                toDoUser = _userService.GetUser(update?.Message?.From?.Id ?? 0, ct).Result;
                 
                 context.Data.Add("User", toDoUser);
                 
@@ -98,7 +98,7 @@ public class AddTaskScenario : IScenario
                 _toDoService.Add((ToDoUser)context.Data["User"],
                                     (string)context.Data["Name"],
                                     (DateTime)context.Data["Deadline"],
-                                    _toDoListService.Get(toDoListCallbackDto.ToDoListId ?? Guid.Empty, ct).Result);
+                                    _toDoListService.Get(toDoListCallbackDto.ToDoListId ?? Guid.Empty, ct).Result, ct);
                 await bot.SendMessage(update.CallbackQuery.Message.Chat,"Задача добавлена.", cancellationToken:ct, replyMarkup: KeyboardHelper.GetDefaultKeyboard());
                 return ScenarioResult.Completed;
             default:
