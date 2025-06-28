@@ -23,7 +23,8 @@ namespace Bot
             {
                 new AddTaskScenario(userService, toDoListService, toDoService),
                 new AddListScenario(userService, toDoListService),
-                new DeleteListScenario(userService, toDoListService, toDoService)
+                new DeleteListScenario(userService, toDoListService, toDoService),
+                new DeleteTaskScenario(toDoService)
             };
 
             

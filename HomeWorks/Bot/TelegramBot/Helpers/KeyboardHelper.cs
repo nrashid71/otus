@@ -14,4 +14,16 @@ public static class KeyboardHelper
             ResizeKeyboard = true
         };
     }
+    
+    public static InlineKeyboardMarkup YesNoKeyboard()
+    {
+        return new InlineKeyboardMarkup(
+            new[]{
+                new[]{
+                    InlineKeyboardButton.WithCallbackData("✅Да", "yes"),
+                    InlineKeyboardButton.WithCallbackData("❌Нет", "no")
+                }
+            });
+    }
+    
 }
