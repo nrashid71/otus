@@ -1,5 +1,3 @@
-using LinqToDB;
-using LinqToDB.Data;
 
 namespace Bot;
 

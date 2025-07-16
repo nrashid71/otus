@@ -7,11 +7,11 @@ public class ToDoDataContext : DataConnection
 {
     private readonly IDataContext _dataContext;
 
-    public ITable<ToDoItem> ToDoItems => _dataContext.GetTable<ToDoItem>();
-    public ITable<ToDoList> ToDoLists => _dataContext.GetTable<ToDoList>();
-    public ITable<ToDoUser> ToDoUsers => _dataContext.GetTable<ToDoUser>();
+    public ITable<ToDoItemModel> ToDoItems => _dataContext.GetTable<ToDoItemModel>();
+    public ITable<ToDoListModel> ToDoLists => _dataContext.GetTable<ToDoListModel>();
+    public ITable<ToDoUserModel> ToDoUsers => _dataContext.GetTable<ToDoUserModel>();
 
-    public ToDoDataContext(string connectionString) : base(ProviderName.PostgreSQL, connectionString)
+    public ToDoDataContext(string connectionString) : base(ProviderName.PostgreSQL15, connectionString)
     {
         _dataContext = this;
     }
