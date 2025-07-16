@@ -7,15 +7,19 @@ namespace Bot
     {
         static void Main(string[] args)
         {
+            DataContextFactory dataContextFactory = new DataContextFactory();
 //            IToDoRepository inMemoryToDoRepository = new InMemoryToDoRepository();
-            IToDoRepository toDoRepository = new FileToDoRepository(Path.Combine(Directory.GetCurrentDirectory(), "FileToDoRepository"));
+//            IToDoRepository toDoRepository = new FileToDoRepository(Path.Combine(Directory.GetCurrentDirectory(), "FileToDoRepository"));
+            IToDoRepository toDoRepository = new SqlToDoRepository(dataContextFactory);
             IToDoService toDoService = new ToDoService(toDoRepository);
 
 //            IUserRepository inMemoryUserRepository = new InMemoryUserRepository();
-            IUserRepository userRepository = new FileUserRepository(Path.Combine(Directory.GetCurrentDirectory(), "FileUserRepository"));
+//            IUserRepository userRepository = new FileUserRepository(Path.Combine(Directory.GetCurrentDirectory(), "FileUserRepository"));
+            IUserRepository userRepository = new SqlUserRepository(dataContextFactory);
             IUserService userService = new UserService(userRepository);
 
-            IToDoListRepository toDoListRepository = new FileToDoListRepository(Path.Combine(Directory.GetCurrentDirectory(), "FileToDoListRepository"));
+//            IToDoListRepository toDoListRepository = new FileToDoListRepository(Path.Combine(Directory.GetCurrentDirectory(), "FileToDoListRepository"));
+            IToDoListRepository toDoListRepository = new SqlToDoListRepository(dataContextFactory);
             IToDoListService toDoListService = new ToDoListService(toDoListRepository);
             
             IScenarioContextRepository contextRepository = new InMemoryScenarioContextRepository();

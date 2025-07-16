@@ -18,7 +18,13 @@ public class ToDoListService : IToDoListService
         {
             throw new ArgumentOutOfRangeException($"Список с названием \"{name}\" уже существует.");
         }
-        var toDoList = new ToDoList(name, user);
+
+        var toDoList = new ToDoList()
+        {
+            Name = name,
+            ToDoUser = user,
+            Id = Guid.NewGuid()
+        };
         _toDoListRepository.Add(toDoList, ct);
         return toDoList;
     }

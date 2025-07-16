@@ -2,7 +2,7 @@ namespace Bot;
 
 public enum ToDoItemState
 {
-    Active,
+    Active = 0,
     
-    Completed
+    Completed = 1
 }
