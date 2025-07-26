@@ -14,7 +14,12 @@ public class UserService : IUserService
         var toDoUser = await GetUser(telegramUserId, ct);
         if (toDoUser == null)
         {
-            toDoUser = new ToDoUser(telegramUserId, telegramUserName);
+            toDoUser = new ToDoUser()
+            {
+                TelegramUserId = telegramUserId,
+                TelegramUserName = telegramUserName,
+                UserId = Guid.NewGuid()
+            };
             await _userRepository.Add(toDoUser, ct);
         }
         return toDoUser;

@@ -48,7 +48,14 @@ public class ToDoService : IToDoService
             throw new TaskCountLimitException((int)_taskCountLimit);
         }        
         
-        ToDoItem toDoItem = new ToDoItem(name, user, deadline, list);
+        ToDoItem toDoItem = new ToDoItem()
+        {
+            Name =  name,
+            ToDoUser = user,
+            Deadline = deadline,
+            List = list,
+            Id = Guid.NewGuid()
+        };
         
         await _toDoRepository.Add(toDoItem,ct);
         
