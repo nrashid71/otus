@@ -14,10 +14,10 @@ public class SqlToDoListRepository : IToDoListRepository
     {
         await using (var dbContext = _dataContextFactory.CreateDataContext())
         {
-            var result  = dbContext
+            var result  = await dbContext
                 .ToDoLists
                 .LoadWith(r => r.ToDoUser)
-                .FirstOrDefault(i => i.Id == id);
+                .FirstOrDefaultAsync(i => i.Id == id);
             return result == null ? null : ModelMapper.MapFromModel(result);
         }
     }
@@ -40,7 +40,6 @@ public class SqlToDoListRepository : IToDoListRepository
     {
         await using (var dbContext = _dataContextFactory.CreateDataContext())
         {
-            await dbContext.BeginTransactionAsync(ct);
             await dbContext.InsertWithIdentityAsync(ModelMapper.MapToModel(list),token:ct);
             await dbContext.CommitTransactionAsync(ct);
         }
@@ -50,7 +49,6 @@ public class SqlToDoListRepository : IToDoListRepository
     {
         await using (var dbContext = _dataContextFactory.CreateDataContext())
         {
-            await dbContext.BeginTransactionAsync(ct);
             await dbContext.DeleteAsync(new ToDoListModel(){ Id = id},token:ct);
             await dbContext.CommitTransactionAsync(ct);
         }

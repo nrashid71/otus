@@ -7,7 +7,7 @@ namespace Bot
     {
         static void Main(string[] args)
         {
-            DataContextFactory dataContextFactory = new DataContextFactory();
+            DataContextFactory dataContextFactory = new DataContextFactory(Environment.GetEnvironmentVariable("DB_CONNECTION_STRING"));
 //            IToDoRepository inMemoryToDoRepository = new InMemoryToDoRepository();
 //            IToDoRepository toDoRepository = new FileToDoRepository(Path.Combine(Directory.GetCurrentDirectory(), "FileToDoRepository"));
             IToDoRepository toDoRepository = new SqlToDoRepository(dataContextFactory);

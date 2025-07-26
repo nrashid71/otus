@@ -24,7 +24,7 @@ public class SqlUserRepository : IUserRepository
     {
         await using (var dbContext = _dataContextFactory.CreateDataContext())
         {
-            var r = dbContext.ToDoUsers.FirstOrDefault(i => i.TelegramUserId == telegramUserId);
+            var r = await dbContext.ToDoUsers.FirstOrDefaultAsync(i => i.TelegramUserId == telegramUserId);
             return r == null ? null : ModelMapper.MapFromModel(r);
         }
     }
@@ -33,7 +33,6 @@ public class SqlUserRepository : IUserRepository
     {
         await using (var dbContext = _dataContextFactory.CreateDataContext())
         {
-            await dbContext.BeginTransactionAsync(ct);
             await dbContext.InsertWithIdentityAsync(ModelMapper.MapToModel(user),token:ct);
             await dbContext.CommitTransactionAsync(ct);
         }

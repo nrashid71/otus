@@ -16,11 +16,11 @@ public class SqlToDoRepository : IToDoRepository
     {
         using (var dbContext = _dataContextFactory.CreateDataContext())
         {
-            var result = dbContext
+            var result = await dbContext
                                         .ToDoItems
                                         .LoadWith(i => i.ToDoUser)
                                         .LoadWith(i => i.ToDoList)
-                                        .FirstOrDefault(i => i.Id == id);
+                                        .FirstOrDefaultAsync(i => i.Id == id);
             return result == null ? null : ModelMapper.MapFromModel(result);
         }
     }
@@ -61,7 +61,6 @@ public class SqlToDoRepository : IToDoRepository
         {
             await using (var dbContext = _dataContextFactory.CreateDataContext())
             {
-                await dbContext.BeginTransactionAsync(ct);
                 await dbContext.InsertWithIdentityAsync(ModelMapper.MapToModel(item),token:ct);
                 await dbContext.CommitTransactionAsync(ct);
             }
@@ -76,7 +75,6 @@ public class SqlToDoRepository : IToDoRepository
     {
         await using (var dbContext = _dataContextFactory.CreateDataContext())
         {
-            await dbContext.BeginTransactionAsync(ct);
             await dbContext.InsertOrReplaceAsync(ModelMapper.MapToModel(item),token:ct);
             await dbContext.CommitTransactionAsync(ct);
         }
@@ -86,7 +84,6 @@ public class SqlToDoRepository : IToDoRepository
     {
         await using (var dbContext = _dataContextFactory.CreateDataContext())
         {
-            await dbContext.BeginTransactionAsync(ct);
             await dbContext.DeleteAsync(new ToDoItemModel(){ Id = id},token:ct);
             await dbContext.CommitTransactionAsync(ct);
         }

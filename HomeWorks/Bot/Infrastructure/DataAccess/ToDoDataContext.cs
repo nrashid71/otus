@@ -5,14 +5,11 @@ namespace Bot;
 
 public class ToDoDataContext : DataConnection
 {
-    private readonly IDataContext _dataContext;
-
-    public ITable<ToDoItemModel> ToDoItems => _dataContext.GetTable<ToDoItemModel>();
-    public ITable<ToDoListModel> ToDoLists => _dataContext.GetTable<ToDoListModel>();
-    public ITable<ToDoUserModel> ToDoUsers => _dataContext.GetTable<ToDoUserModel>();
+    public ITable<ToDoItemModel> ToDoItems => this.GetTable<ToDoItemModel>();
+    public ITable<ToDoListModel> ToDoLists => this.GetTable<ToDoListModel>();
+    public ITable<ToDoUserModel> ToDoUsers => this.GetTable<ToDoUserModel>();
 
     public ToDoDataContext(string connectionString) : base(ProviderName.PostgreSQL15, connectionString)
     {
-        _dataContext = this;
     }
 }
