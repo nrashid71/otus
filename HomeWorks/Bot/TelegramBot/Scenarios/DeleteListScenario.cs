@@ -31,6 +31,7 @@ public class DeleteListScenario : IScenario
             case null:
                 ToDoUser toDoUser = _userService.GetUser(update?.CallbackQuery?.From?.Id ?? 0, ct).Result;
                 context.Data.Add("User", toDoUser);
+                context.Data.Add("Chat", update.CallbackQuery.Message.Chat);
                 var inlineKeyboard = new InlineKeyboardMarkup(
                     _toDoListService.GetUserLists(toDoUser.UserId, ct).Result.Select(
                              l => new[]{InlineKeyboardButton.WithCallbackData(l.Name, new ToDoListCallbackDto("deletelist", l.Id).ToString())}));
