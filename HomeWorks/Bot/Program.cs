@@ -21,7 +21,7 @@ namespace Bot
 //            IToDoListRepository toDoListRepository = new FileToDoListRepository(Path.Combine(Directory.GetCurrentDirectory(), "FileToDoListRepository"));
             IToDoListRepository toDoListRepository = new SqlToDoListRepository(dataContextFactory);
             IToDoListService toDoListService = new ToDoListService(toDoListRepository);
-            
+
             IScenarioContextRepository contextRepository = new InMemoryScenarioContextRepository();
             IScenario[] scenarios = new IScenario[]
             {
@@ -50,6 +50,10 @@ namespace Bot
                 var botClient = new TelegramBotClient(token);
 
                 var ct = new CancellationTokenSource();
+                
+                BackgroundTaskRunner backgroundTaskRunner = new BackgroundTaskRunner();
+                backgroundTaskRunner.AddTask( new ResetScenarioBackgroundTask(TimeSpan.FromHours(1), contextRepository, botClient));
+                backgroundTaskRunner.StartTasks(ct.Token);
                 botClient.StartReceiving(handler, cancellationToken:ct.Token,
                     receiverOptions: new(){AllowedUpdates=[UpdateType.Message, UpdateType.CallbackQuery, UpdateType.Unknown]}
                     );
@@ -59,6 +63,7 @@ namespace Bot
                     var s = Console.ReadLine();
                     if (s?.ToUpper() == "A")
                     {
+                        backgroundTaskRunner.StopTasks(ct.Token);
                         ct.Cancel();
                         Console.WriteLine("Бот остановлен");
                         break;

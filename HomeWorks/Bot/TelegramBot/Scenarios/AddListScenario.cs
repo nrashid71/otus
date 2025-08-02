@@ -27,6 +27,7 @@ public class AddListScenario : IScenario
             case null:
                 ToDoUser toDoUser = _userService.GetUser(update?.CallbackQuery?.From?.Id ?? 0, ct).Result;
                 context.Data.Add("User", toDoUser);
+                context.Data.Add("Chat", update.CallbackQuery.Message.Chat);
                 context.CurrentStep = "Name";
                 await bot.SendMessage(update.CallbackQuery.Message.Chat,"Введите название списка:", cancellationToken:ct);
                 return ScenarioResult.Transition;

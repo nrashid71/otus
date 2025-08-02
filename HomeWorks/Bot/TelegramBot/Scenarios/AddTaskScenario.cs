@@ -36,6 +36,7 @@ public class AddTaskScenario : IScenario
                 toDoUser = _userService.GetUser(update?.Message?.From?.Id ?? 0, ct).Result;
                 
                 context.Data.Add("User", toDoUser);
+                context.Data.Add("Chat", update.Message.Chat);
                 
                 replyMarkup = new ReplyKeyboardMarkup(new[]
                 {

@@ -25,6 +25,7 @@ public class DeleteTaskScenario: IScenario
                 var toDoItemCallbackDto = ToDoItemCallbackDto.FromString(update.CallbackQuery.Data);
                 var toDoItem = await _toDoService.Get(toDoItemCallbackDto.ToDoItemId, ct);
                 context.Data.Add("ToDoItem", toDoItem.Id);
+                context.Data.Add("Chat", update.CallbackQuery.Message.Chat);
                 context.CurrentStep = "Delete";
                 await bot.SendMessage(update.CallbackQuery.Message.Chat.Id,
                     $"Подтверждаете удаление задачи {toDoItem?.Name}",
