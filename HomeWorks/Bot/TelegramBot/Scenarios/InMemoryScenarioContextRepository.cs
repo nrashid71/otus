@@ -23,4 +23,9 @@ public class InMemoryScenarioContextRepository : IScenarioContextRepository
     {
             _contexts.Remove(userId, out _);
     }
+
+    public async Task<IReadOnlyList<ScenarioContext>> GetContexts(CancellationToken ct)
+    {
+        return _contexts.Values.ToList().AsReadOnly();
+    }
 }
