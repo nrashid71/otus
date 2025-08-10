@@ -37,4 +37,15 @@ public class SqlUserRepository : IUserRepository
             await dbContext.CommitTransactionAsync(ct);
         }
     }
+    public async Task<IReadOnlyList<ToDoUser>> GetUsers(CancellationToken ct)
+    {
+        await using (var dbContext = _dataContextFactory.CreateDataContext())
+        {
+            return dbContext
+                .ToDoUsers
+                .Select(i =>ModelMapper.MapFromModel(i))
+                .ToList()
+                .AsReadOnly();
+        }
+    }
 }

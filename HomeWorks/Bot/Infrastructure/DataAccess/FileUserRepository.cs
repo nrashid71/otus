@@ -3,6 +3,11 @@ using System.Text.Json;
 namespace Bot;
 public class FileUserRepository : IUserRepository
 {
+    public async Task<IReadOnlyList<ToDoUser>> GetUsers(CancellationToken ct)
+    {
+        throw new NotImplementedException();
+    }
+
     private string _baseDirecory;
     
     public FileUserRepository(string baseFolder)

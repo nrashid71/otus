@@ -75,4 +75,32 @@ internal static class ModelMapper
             ToDoUserId = entity.ToDoUser.UserId
         };
     }
+    
+    public static Notification MapFromModel(NotificationModel model)
+    {
+        return new Notification()
+        {
+            Id = model.Id,
+            ToDoUser = model.ToDoUser,
+            Type = model.Type,
+            Text = model.Text,
+            ScheduledAt = model.ScheduledAt,
+            IsNotified = model.IsNotified,
+            NotifiedAt = model.NotifiedAt
+        };
+    }
+    
+    public static NotificationModel MapToModel(Notification entity)
+    {
+        return new NotificationModel()
+        {
+            Id = entity.Id,
+            ToDoUser = entity.ToDoUser,
+            Type = entity.Type,
+            Text = entity.Text,
+            ScheduledAt = entity.ScheduledAt,
+            IsNotified = entity.IsNotified,
+            NotifiedAt = entity.NotifiedAt
+        };
+    }
 }

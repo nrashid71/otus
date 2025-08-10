@@ -31,6 +31,7 @@ namespace Bot
                 new DeleteTaskScenario(toDoService)
             };
 
+            INotificationService notificationService = new NotificationService(dataContextFactory);
             
             UpdateHandler handler = new UpdateHandler(toDoService, userService, scenarios, contextRepository, toDoListService);
             
@@ -53,6 +54,9 @@ namespace Bot
                 
                 BackgroundTaskRunner backgroundTaskRunner = new BackgroundTaskRunner();
                 backgroundTaskRunner.AddTask( new ResetScenarioBackgroundTask(TimeSpan.FromHours(1), contextRepository, botClient));
+                backgroundTaskRunner.AddTask( new NotificationBackgroundTask(TimeSpan.FromMinutes(1), notificationService, botClient));
+                backgroundTaskRunner.AddTask( new DeadlineBackgroundTask(TimeSpan.FromHours(1), notificationService, userRepository, toDoRepository));
+                backgroundTaskRunner.AddTask( new TodayBackgroundTask(TimeSpan.FromDays(1), notificationService, userRepository, toDoRepository));
                 backgroundTaskRunner.StartTasks(ct.Token);
                 botClient.StartReceiving(handler, cancellationToken:ct.Token,
                     receiverOptions: new(){AllowedUpdates=[UpdateType.Message, UpdateType.CallbackQuery, UpdateType.Unknown]}

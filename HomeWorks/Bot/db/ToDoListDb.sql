@@ -35,6 +35,20 @@ create table if not exists "Infrastructure"."ToDoItem" (
 create index if not exists "I_ToDoItem_ToDoUserId" on "Infrastructure"."ToDoItem"("ToDoUserId");
 create index if not exists "I_ToDoItem_ToDoListId" on "Infrastructure"."ToDoItem"("ToDoListId");
 
+create table if not exists "Infrastructure"."Notification" (
+    "Id" uuid not null,
+    "ToDoUserId" uuid not null,
+    "Type" text not null,
+    "Text" text not null,
+    "ScheduledAt" timestamp not null,
+    "IsNotified" boolean not null,
+    "NotifiedAt" timestamp null,
+    constraint "PK_Notification" primary key ("Id"),
+    constraint "FK_TNotification_ToDoUserId" foreign key ("ToDoUserId") references "ToDoUser"("UserId")
+    );
+create index if not exists "I_Notification_ToDoUserId" on "Infrastructure"."Notification"("ToDoUserId");
+
+
 commit;
 
 

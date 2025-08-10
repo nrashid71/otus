@@ -122,4 +122,16 @@ public class SqlToDoRepository : IToDoRepository
                     .AsReadOnly();
         }
     }
+    public async Task<IReadOnlyList<ToDoItem>> GetActiveWithDeadline(Guid userId, DateTime from, DateTime to, CancellationToken ct)
+    {
+        await using (var dbContext = _dataContextFactory.CreateDataContext())
+        {
+            return dbContext
+                .ToDoItems
+                .Where(t => t.ToDoUser.UserId == userId && t.State == (int)ToDoItemState.Active && from <= t.Deadline && t.Deadline < to)
+                .Select(i => ModelMapper.MapFromModel(i))
+                .ToList()
+                .AsReadOnly();
+        }
+    }
 }

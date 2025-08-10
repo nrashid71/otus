@@ -144,4 +144,9 @@ public class FileToDoRepository : IToDoRepository
     {
         return (await GetAllByUserId(userId, ct)).Where(t => predicate(t)).ToList().AsReadOnly();
     }
+
+    public async Task<IReadOnlyList<ToDoItem>> GetActiveWithDeadline(Guid userId, DateTime from, DateTime to, CancellationToken ct)
+    {
+        throw new NotImplementedException();
+    }
 }

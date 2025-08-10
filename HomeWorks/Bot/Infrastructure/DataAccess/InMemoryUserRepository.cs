@@ -18,4 +18,9 @@ public class InMemoryUserRepository : IUserRepository
     {
         _users.Add(user);
     }
+
+    public async Task<IReadOnlyList<ToDoUser>> GetUsers(CancellationToken ct)
+    {
+        throw new NotImplementedException();
+    }
 }
