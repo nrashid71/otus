@@ -54,4 +54,9 @@ public class InMemoryToDoRepository : IToDoRepository
     {
         return _toDoItems.Where(t => t.ToDoUser.UserId == userId && predicate(t)).ToList().AsReadOnly();
     }
+
+    public async Task<IReadOnlyList<ToDoItem>> GetActiveWithDeadline(Guid userId, DateTime from, DateTime to, CancellationToken ct)
+    {
+        throw new NotImplementedException();
+    }
 }

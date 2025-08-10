@@ -27,5 +27,5 @@ public interface IToDoRepository
     Task<int> CountActive(Guid userId, CancellationToken ct);
     
     Task<IReadOnlyList<ToDoItem>> Find(Guid userId, Func<ToDoItem, bool> predicate, CancellationToken ct); 
-    
+    Task<IReadOnlyList<ToDoItem>> GetActiveWithDeadline(Guid userId, DateTime from, DateTime to, CancellationToken ct);
 }

@@ -24,7 +24,7 @@ public class ResetScenarioBackgroundTask : BackgroundTask
             if (DateTime.UtcNow - s.CreatedAt > _resetScenarioTimeout)
             {
                 _scenarioRepository.ResetContext(s.UserId, ct);
-                await _botClient.SendMessage(((Chat)s.Data["Chat"]).Id,
+                await _botClient.SendMessage( ((Chat)s.Data["Chat"]).Id,
                     $"Сценарий отменен, так как не поступил ответ в течение {_resetScenarioTimeout}",
                     cancellationToken:ct,
                     replyMarkup: KeyboardHelper.GetDefaultKeyboard());
