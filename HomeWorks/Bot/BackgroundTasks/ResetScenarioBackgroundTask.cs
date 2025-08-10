@@ -5,11 +5,11 @@ namespace Bot;
 
 public class ResetScenarioBackgroundTask : BackgroundTask
 {
-    private IScenarioContextRepository _scenarioRepository;
+    private readonly IScenarioContextRepository _scenarioRepository;
     
-    private ITelegramBotClient _botClient;
+    private readonly ITelegramBotClient _botClient;
 
-    private TimeSpan _resetScenarioTimeout;
+    private readonly TimeSpan _resetScenarioTimeout;
     
     public  ResetScenarioBackgroundTask(TimeSpan resetScenarioTimeout, IScenarioContextRepository scenarioRepository, ITelegramBotClient bot) : base(resetScenarioTimeout, nameof(ResetScenarioBackgroundTask))
     {
@@ -19,12 +19,12 @@ public class ResetScenarioBackgroundTask : BackgroundTask
     }
     protected override async Task Execute(CancellationToken ct)
     {
-        foreach (var s in _scenarioRepository.GetContexts(ct).Result)
+        foreach (var s in await _scenarioRepository.GetContexts(ct))
         {
             if (DateTime.UtcNow - s.CreatedAt > _resetScenarioTimeout)
             {
-                _scenarioRepository.ResetContext(s.UserId, ct);
-                await _botClient.SendMessage( ((Chat)s.Data["Chat"]).Id,
+                await _scenarioRepository.ResetContext(s.UserId, ct);
+                await _botClient.SendMessage(((Chat)s.Data["Chat"]).Id,
                     $"Сценарий отменен, так как не поступил ответ в течение {_resetScenarioTimeout}",
                     cancellationToken:ct,
                     replyMarkup: KeyboardHelper.GetDefaultKeyboard());
